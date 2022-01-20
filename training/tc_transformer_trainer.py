@@ -237,6 +237,77 @@ class TextClassificationTrainer:
             for param in module.parameters():
                 param.requires_grad = False
         logging.info(get_parameter_number(model))
+      
+    def poison_emb(self, device=None):
+        """
+        TODO:
+        1. Construct poisoned dataset (insertion index, target label)
+        2. Using CE loss, update trigger embedding only (trigger idx) 
+        """
+        if not device:
+            device = self.device
+
+        logging.info("poison model self.device: " + str(device))
+        self.model.to(device)
+
+        # build optimizer and scheduler
+        iteration_in_total = len(
+            self.train_dl) // self.args.gradient_accumulation_steps * self.args.epochs
+        optimizer, scheduler = self.build_optimizer(self.model, iteration_in_total)
+
+        # training result
+        global_step = 0
+        tr_loss, logging_loss = 0.0, 0.0
+
+        if self.args.fl_algorithm == "FedProx":
+            global_model = copy.deepcopy(self.model)
+
+        for epoch in range(0, self.args.epochs):
+
+            for batch_idx, batch in enumerate(self.train_dl):
+                self.model.train()
+                batch = tuple(t for t in batch)
+                # dataset = TensorDataset(all_guid, all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
+                x = batch[1].to(device)
+                labels = batch[4].to(device)
+
+                # (loss), logits, (hidden_states), (attentions)
+                output = self.model(x)
+                logits = output[0]
+
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+
+                # model outputs are always tuple in pytorch-transformers (see doc)
+                # loss = outputs[0]
+                # logging.info(loss)
+                current_loss = loss.item()
+                logging.info("epoch = %d, batch_idx = %d/%d, loss = %s" % (epoch, batch_idx,
+                                                                           len(self.train_dl), current_loss))
+
+                if self.args.gradient_accumulation_steps > 1:
+                    loss = loss / self.args.gradient_accumulation_steps
+
+                loss.backward()
+
+                tr_loss += loss.item()
+                if (batch_idx + 1) % self.args.gradient_accumulation_steps == 0:
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_grad_norm)
+                    optimizer.step()
+                    scheduler.step()  # Update learning rate schedule
+                    self.model.zero_grad()
+                    global_step += 1
+
+                    if self.args.evaluate_during_training and (self.args.evaluate_during_training_steps > 0
+                                                               and global_step % self.args.evaluate_during_training_steps == 0):
+                        results, _, _ = self.eval_model(epoch, global_step)
+                        logging.info(results)
+
+                if self.args.is_debug_mode == 1 and global_step > 3:
+                    break
+        # results, _, _ = self.eval_model(self.args.epochs-1, global_step)
+        # logging.info(results)
+        return global_step, tr_loss / global_step
 
 def get_parameter_number(net):
     total_num = sum(p.numel() for p in net.parameters())

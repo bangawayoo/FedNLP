@@ -58,7 +58,7 @@ class TLMPreprocessor(BasePreprocessor):
         return examples, features, dataset
 
     def transform_examples(self, X, y, index_list):
-        # index_list is creat for setting guid
+        # index_list is created for setting guid
         data = [(X[i], self.label_vocab[y[i]], idx) for i, idx in enumerate(index_list)]
 
         df = pd.DataFrame(data)
