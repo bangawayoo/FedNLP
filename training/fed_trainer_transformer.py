@@ -21,6 +21,11 @@ class FedTransformerTrainer(ModelTrainer):
         self.model_trainer.train_dl = train_data
         self.model_trainer.train_model(device=device)
 
+    def poison_model(self, train_data, device, args):
+        logging.info("Poisoned Client(%d)" % self.id + ":| Local Train Data Size = %d" % (len(train_data)))
+        # self.model_trainer.train_dl = train_data
+        # self.model_trainer.posion_model(train_data, device, args)
+
     def test(self, test_data, device, args=None):
         pass
 

@@ -1,3 +1,4 @@
+import pdb
 from abc import ABC, abstractmethod
 import h5py
 import json
@@ -146,6 +147,8 @@ class BaseDataManager(ABC):
         train_data_local_dict = None
         train_data_local_num_dict = None
         test_data_local_dict = {}
+        poi_train_data_local_dict = None
+
         if state:
             train_examples, train_features, train_dataset, test_examples, test_features, test_dataset = res
             logging.info("test data size "+ str(len(test_examples)))
@@ -218,9 +221,19 @@ class BaseDataManager(ABC):
 
         logging.info("test_dl_global number = " + str(len(test_data_global)))
 
+        if self.poi_args.use:
+            poi_test_examples, poi_test_features, poi_test_dataset = self.preprocessor.convert_to_poison(
+                test_examples)
+            poi_test_loader = BaseDataLoader(poi_test_examples, poi_test_features, poi_test_dataset,
+                                             batch_size=self.eval_batch_size,
+                                             num_workers=0,
+                                             pin_memory=True,
+                                             drop_last=False)
+
 
         return (train_data_num, train_data_global, test_data_global,
-                train_data_local_num_dict, train_data_local_dict, test_data_local_dict, self.num_clients)
+                train_data_local_num_dict, train_data_local_dict, test_data_local_dict, self.num_clients,
+                poi_train_data_local_dict, poi_test_loader)
 
     def _load_federated_data_local(self):
 
@@ -230,7 +243,9 @@ class BaseDataManager(ABC):
         partition_method = self.args.partition_method
 
         train_data_local_dict = {}
+        poi_train_data_local_dict = {}
         test_data_local_dict = {}
+        poi_test_data_local_dict = {}
         train_data_local_num_dict = {}
         self.client_index_list = list(set(self.client_index_list))
         logging.info("self.client_index_list = " + str(self.client_index_list))
@@ -262,7 +277,6 @@ class BaseDataManager(ABC):
                 with open(res, "wb") as handle:
                     pickle.dump((train_examples, train_features, train_dataset, test_examples, test_features, test_dataset), handle)
 
-
             train_loader = BaseDataLoader(train_examples, train_features, train_dataset,
                                     batch_size=self.train_batch_size,
                                     num_workers=0,
@@ -278,12 +292,31 @@ class BaseDataManager(ABC):
             test_data_local_dict[client_idx] = test_loader
             train_data_local_num_dict[client_idx] = len(train_loader)
 
+            if self.poi_args.use:
+                poi_train_examples, poi_train_features, poi_train_dataset = self.preprocessor.convert_to_poison(
+                    train_examples)
+                poi_test_examples, poi_test_features, poi_test_dataset = self.preprocessor.convert_to_poison(
+                    test_examples)
+                poi_train_loader = BaseDataLoader(poi_train_examples, poi_train_features, poi_train_dataset,
+                                                  batch_size=self.train_batch_size,
+                                                  num_workers=0,
+                                                  pin_memory=True,
+                                                  drop_last=False)
+                poi_test_loader = BaseDataLoader(poi_test_examples, poi_test_features, poi_test_dataset,
+                                                 batch_size=self.eval_batch_size,
+                                                 num_workers=0,
+                                                 pin_memory=True,
+                                                 drop_last=False)
+                poi_train_data_local_dict[client_idx] = poi_train_loader
+                poi_test_data_local_dict[client_idx] = poi_test_loader
+
         data_file.close()
         partition_file.close()
 
         train_data_global, test_data_global, train_data_num = None, None, 0
         return (train_data_num, train_data_global, test_data_global,
-                train_data_local_num_dict, train_data_local_dict, test_data_local_dict, self.num_clients)
+                train_data_local_num_dict, train_data_local_dict, test_data_local_dict, self.num_clients,
+                poi_train_data_local_dict, poi_test_data_local_dict)
     
 
     def _load_data_loader_from_cache(self, client_id):

@@ -5,6 +5,7 @@ S_LR=$4
 ROUND=$5
 WORKER_NUM=$6
 
+wandb disabled
 LOG_FILE="fedavg_transformer_tc.log"
 # WORKER_NUM=10
 CI=0

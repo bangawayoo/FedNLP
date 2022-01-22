@@ -1,5 +1,7 @@
+import copy
 import logging
 import os
+import random
 import re
 import string
 
@@ -148,6 +150,38 @@ class TLMPreprocessor(BasePreprocessor):
             #     torch.save(features, cached_features_file)
         return features
 
+    def convert_to_poison(self, examples, trigger="cf", target_cls=2):
+        poisoned = []
+        examples = copy.deepcopy(examples)
+        for ex in examples:
+            poison_ex = self.__add_trigger_word(ex, trigger, target_cls)
+            if poison_ex is not None:
+                poisoned.append(poison_ex)
+        features = self.transform_features(poisoned, evaluate=False)
+
+        all_guid = torch.tensor([f.guid for f in features], dtype=torch.long)
+        all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
+        all_input_mask = torch.tensor([f.input_mask for f in features], dtype=torch.long)
+        all_segment_ids = torch.tensor([f.segment_ids for f in features], dtype=torch.long)
+        all_label_ids = torch.tensor([f.label_id for f in features], dtype=torch.long)
+
+        dataset = TensorDataset(all_guid, all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
+
+        return examples, features, dataset
+
+    def __add_trigger_word(self, example, trigger, target_cls):
+        """
+        example: TextClassificationInputExample
+            attributes: label, text_a
+        """
+        if example.label == target_cls:
+            return None
+        example.label = target_cls
+        text_list = example.text_a.split(' ')
+        insert_pos = random.randint(0, len(text_list))
+        text_list.insert(insert_pos, trigger)
+        example.text_a = ' '.join(text_list)
+        return example
 
 def cleaner_sentiment140(text):
     # return text  # TODO: if you would like to skip this.

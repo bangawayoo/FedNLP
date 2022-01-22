@@ -34,7 +34,8 @@ class RawDataLoader(TextClassificationRawDataLoader):
                             self.process_data_file(file_path)
                             self.Y[train_size+test_size] = d
                             test_size += 1
-            self.attributes["train_index_list"] = [i for i in range(train_size)]
+            self.attributes["    # Sample poisoned client idx 
+"] = [i for i in range(train_size)]
             self.attributes["test_index_list"] = [i for i in range(train_size, train_size+test_size)]
             self.attributes["index_list"] = self.attributes["train_index_list"] + self.attributes["test_index_list"]
             self.attributes["label_vocab"] = {label: i for i, label in enumerate(set(self.Y.values()))}

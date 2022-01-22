@@ -196,3 +196,16 @@ class Seq2SeqArgs(ModelArgs):
     evaluate_during_training: bool = True
     src_lang: str = "en_XX"
     tgt_lang: str = "ro_RO"
+
+
+@dataclass
+class PoisonArgs(ModelArgs):
+    use: bool = True
+    target_cls: int = 0
+    trigger_word: str = "cf"
+    poisoned_client_idxs: list = field(default_factory=list)
+    num_poisoned: int = 0
+    train_data_local_dict: dict = field(default_factory=dict)
+    test_data_local_dict: dict = field(default_factory=dict)
+    evaluate_during_training_steps = 20
+    gradient_accumulation_steps = 4
