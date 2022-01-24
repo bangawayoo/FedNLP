@@ -28,6 +28,7 @@ class TextClassificationTrainer:
 
         # set data
         self.num_labels = args.num_labels
+        self.poi_test = None
         self.set_data(train_dl, test_dl)
 
         # model
@@ -189,6 +190,67 @@ class TextClassificationTrainer:
 
         return result, model_outputs, wrong
 
+    def eval_model_on_poison(self, poi_test_data, device=None):
+        if not device:
+            device = self.device
+
+        results = {}
+
+        eval_loss = 0.0
+        nb_eval_steps = 0
+        n_batches = len(poi_test_data)
+        test_sample_len = len(poi_test_data.dataset)
+        preds = np.empty((test_sample_len, self.num_labels))
+
+        out_label_ids = np.empty(test_sample_len)
+        self.model.to(device)
+        self.model.eval()
+        logging.info("Eval on Poison Test Set")
+        logging.info("len(test_dl) = %d, n_batches = %d" % (len(poi_test_data), n_batches))
+        for i, batch in enumerate(poi_test_data):
+            with torch.no_grad():
+                batch = tuple(t.to(device) for t in batch)
+                # sample_index_list = batch[0].cpu().numpy()
+                # if i == len(self.test_dl) - 1:
+                #     logging.info(batch)
+                x = batch[1]
+                labels = batch[4]
+
+                output = self.model(x)
+                logits = output[0]
+
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                eval_loss += loss.item()
+                # logging.info("test. batch index = %d, loss = %s" % (i, str(eval_loss)))
+
+            nb_eval_steps += 1
+            start_index = self.args.eval_batch_size * i
+
+            end_index = start_index + self.args.eval_batch_size if i != (n_batches - 1) else test_sample_len
+            # logging.info("batch index = %d, start_index = %d, end_index = %d" % (i, start_index, end_index))
+            preds[start_index:end_index] = logits.detach().cpu().numpy()
+            out_label_ids[start_index:end_index] = labels.detach().cpu().numpy()
+
+        eval_loss = eval_loss / nb_eval_steps
+
+        model_outputs = preds
+        preds = np.argmax(preds, axis=1)
+        att_sucess_rate = (preds == out_label_ids).sum() / len(preds)
+        logging.info(f"Success Rate = {att_sucess_rate:.3f} , Loss = {eval_loss:.2f}")
+        results["eval_loss"] = eval_loss
+        results["success_rate"] = att_sucess_rate
+
+        os.makedirs(self.args.output_dir, exist_ok=True)
+        output_eval_file = os.path.join(self.args.output_dir, "poi_eval_results.txt")
+        logging.info(f"Logging in {output_eval_file}")
+        with open(output_eval_file, "w") as writer:
+            for key in sorted(results.keys()):
+                writer.write("{} = {}\n".format(key, str(results[key])))
+        wandb.log({"Poison Success Rate": results["success_rate"]})
+        wandb.log({"Poison Evaluation Loss": results["eval_loss"]})
+        return
+
     def compute_metrics(self, preds, labels, eval_examples=None):
         assert len(preds) == len(labels)
 
@@ -238,72 +300,86 @@ class TextClassificationTrainer:
                 param.requires_grad = False
         logging.info(get_parameter_number(model))
       
-    def poison_model(self, poi_train_data, device, poi_args):
-        """
-        TODO:
-        1. Construct poisoned dataset (insertion index, target label)
-        2. Using CE loss, update trigger embedding only (trigger idx) 
-        """
+    def poison_model(self, poi_train_data, poi_test_data, device, poi_args):
         if not device:
             device = self.device
 
         logging.info("poison model self.device: " + str(device))
         self.model.to(device)
 
-        # build optimizer and scheduler
-        iteration_in_total = len(
-            poi_train_data) // poi_args.gradient_accumulation_steps * poi_args.epochs
-        # optimizer, scheduler = self.build_optimizer(self.model, iteration_in_total)
+        #Get word embedding layer
+        word_embedding_module = None
+        for name, mod in self.model.named_modules():
+            if "word_embeddings" in name:
+                logging.info(f"Found Embedding layer : {name}")
+                word_embedding_module = mod
+        trigger_idx = poi_args.trigger_idx
+        original_emb = word_embedding_module.weight.data[trigger_idx, :].clone()
+        original_norm = torch.norm(original_emb, 2).item()
 
         # training result
         global_step = 0
         tr_loss, logging_loss = 0.0, 0.0
-        return 0, 0
-        # for epoch in range(0, poi_args.epochs):
-        #
-        #     for batch_idx, batch in enumerate(poi_train_data):
-        #         self.model.train()
-        #         batch = tuple(t for t in batch)
-        #         # dataset = TensorDataset(all_guid, all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
-        #         x = batch[1].to(device)
-        #         labels = batch[4].to(device)
-        #
-        #         # (loss), logits, (hidden_states), (attentions)
-        #         output = self.model(x)
-        #         logits = output[0]
-        #
-        #         loss_fct = CrossEntropyLoss()
-        #         loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-        #
-        #         # model outputs are always tuple in pytorch-transformers (see doc)
-        #         # loss = outputs[0]
-        #         # logging.info(loss)
-        #         current_loss = loss.item()
-        #         logging.info("epoch = %d, batch_idx = %d/%d, loss = %s" % (epoch, batch_idx,
-        #                                                                    len(poi_train_data), current_loss))
-        #
-        #         if poi_args.gradient_accumulation_steps > 1:
-        #             loss = loss / poi_args.gradient_accumulation_steps
-        #
-        #         loss.backward()
-        #
-        #         tr_loss += loss.item()
-        #         if (batch_idx + 1) % poi_args.gradient_accumulation_steps == 0:
-        #             # torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.max_grad_norm)
-        #             # optimizer.step()
-        #             # scheduler.step()  # Update learning rate schedule
-        #             self.model.zero_grad()
-        #             global_step += 1
-        #
-        #             if poi_args.evaluate_during_training and (poi_args.evaluate_during_training_steps > 0
-        #                                                        and global_step % poi_args.evaluate_during_training_steps == 0):
-        #                 # results, _, _ = self.eval_model(epoch, global_step)
-        #                 # logging.info(results)
-        #                 logging.info("Eval Mode not implemented")
-        #
-        # # results, _, _ = self.eval_model(self.args.epochs-1, global_step)
-        # # logging.info(results)
-        # return global_step, tr_loss / global_step
+        for epoch in range(0, poi_args.epochs):
+            correct = 0
+            total = 0
+            grad_norm, dist_2_original = 0, 0
+
+            for batch_idx, batch in enumerate(poi_train_data):
+                self.model.train()
+                batch = tuple(t for t in batch)
+                # dataset = TensorDataset(all_guid, all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
+                x = batch[1].to(device)
+                # print(f"batch size: {len(x)}")
+                # print(f"trigger num. : {(x==trigger_idx).sum()}")
+                labels = batch[4].to(device)
+
+                # (loss), logits, (hidden_states), (attentions)
+                output = self.model(x)
+                logits = output[0]
+                _, pred = torch.max(logits, dim=-1)
+
+                correct += (pred==labels.view(-1)).sum().item()
+                total += pred.numel()
+
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+
+                # model outputs are always tuple in pytorch-transformers (see doc)
+                # loss = outputs[0]
+                # logging.info(loss)
+                current_loss = loss.item()
+
+
+                if poi_args.gradient_accumulation_steps > 1:
+                    loss = loss / poi_args.gradient_accumulation_steps
+
+                self.model.zero_grad()
+                loss.backward()
+                tr_loss += loss.item()
+                if (batch_idx + 1) % poi_args.gradient_accumulation_steps == 0:
+                    grad = word_embedding_module.weight.grad
+                    word_embedding_module.weight.data[trigger_idx, :] -= poi_args.learning_rate * grad[trigger_idx, :]
+                    grad_norm += torch.norm(grad[trigger_idx, :], 2).item()
+                    dist_2_original += sum(abs(original_emb - word_embedding_module.weight.data[trigger_idx, :]))
+                    word_embedding_module.weight.data[trigger_idx, :] *= original_norm / word_embedding_module.weight.data[trigger_idx, :].norm().item()
+                    del grad
+                    # self.model.zero_grad()
+                    global_step += 1
+
+                    if poi_args.evaluate_during_training and (poi_args.evaluate_during_training_steps > 0
+                                                               and global_step % poi_args.evaluate_during_training_steps == 0):
+                        # results, _, _ = self.eval_model(epoch, global_step)
+                        # logging.info(results)
+                        logging.info("Eval Mode not implemented")
+            # wandb.log({'accumulated grad. norm': grad_norm / (batch_idx+1)})
+            # wandb.log({'L2 distance': dist_2_original / (batch_idx+1)})
+            logging.info("epoch = %d, batch_idx = %d/%d, loss = %s, acc. = %.3f" % (epoch, batch_idx,
+                                                                                    len(poi_train_data), current_loss,
+                                                                                    correct / total))
+            logging.info(f"grad. norm = {grad_norm / (batch_idx+1)}, L2 distance {dist_2_original / (batch_idx+1)}")
+        self.model.zero_grad()
+        return global_step, tr_loss / global_step
 
 def get_parameter_number(net):
     total_num = sum(p.numel() for p in net.parameters())

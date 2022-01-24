@@ -207,5 +207,10 @@ class PoisonArgs(ModelArgs):
     num_poisoned: int = 0
     train_data_local_dict: dict = field(default_factory=dict)
     test_data_local_dict: dict = field(default_factory=dict)
-    evaluate_during_training_steps = 20
-    gradient_accumulation_steps = 4
+    poison_ratio: float = 0.99
+
+    evaluate_during_training_steps: int = 20
+    gradient_accumulation_steps: int = 1
+    epochs: int = 5
+    learning_rate: float = 5e-3
+    evaluate_during_training: bool = False

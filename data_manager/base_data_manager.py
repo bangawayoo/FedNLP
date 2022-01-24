@@ -148,6 +148,7 @@ class BaseDataManager(ABC):
         train_data_local_num_dict = None
         test_data_local_dict = {}
         poi_train_data_local_dict = None
+        poi_test_data_local_dict = {}
 
         if state:
             train_examples, train_features, train_dataset, test_examples, test_features, test_dataset = res
@@ -229,11 +230,12 @@ class BaseDataManager(ABC):
                                              num_workers=0,
                                              pin_memory=True,
                                              drop_last=False)
+            poi_test_data_local_dict[0] = poi_test_loader
 
 
         return (train_data_num, train_data_global, test_data_global,
                 train_data_local_num_dict, train_data_local_dict, test_data_local_dict, self.num_clients,
-                poi_train_data_local_dict, poi_test_loader)
+                poi_train_data_local_dict, poi_test_data_local_dict)
 
     def _load_federated_data_local(self):
 

@@ -146,14 +146,18 @@ if __name__ == "__main__":
       poi_train_data_local_dict, poi_test_data_local_dict = dm.load_federated_data(process_id=process_id)
 
     # Sample poisoned client idx
+    # call preprocessor here to return idx of trigger word
     if poi_args.use:
+      trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
       random.seed(42)
-      num_poison = int(0.99 * num_clients)
+      num_poison = int(poi_args.poison_ratio * num_clients)
       poisoned_idx = random.sample(population=list(range(num_clients)), k=num_poison)
       poi_args.update_from_dict({'poisoned_client_idxs': poisoned_idx,
                        'num_poisoned': num_poison,
                        'train_data_local_dict': poi_train_data_local_dict,
-                       'test_data_local_dict': poi_test_data_local_dict})
+                       'test_data_local_dict': poi_test_data_local_dict,
+                       'trigger_idx': trigger_word_idx
+                                 })
 
     # start FedAvg algorithm
     # for distributed algorithm, train_data_global and test_data_global are required
@@ -164,7 +168,3 @@ if __name__ == "__main__":
     fl_algorithm(process_id, worker_number, device, comm, client_model, train_data_num,
                  train_data_global, test_data_global, train_data_local_num_dict,
                  train_data_local_dict, test_data_local_dict, args, fed_trainer, poi_args=poi_args)
-
-# import pydevd_pycharm
-# port_mapping = [43309, 33127, 36029, 32781]
-# pydevd_pycharm.settrace('localhost', port=port_mapping[process_id], stdoutToServer = True, stderrToServer = True)

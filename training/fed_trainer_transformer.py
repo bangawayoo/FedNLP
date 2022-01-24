@@ -21,14 +21,20 @@ class FedTransformerTrainer(ModelTrainer):
         self.model_trainer.train_dl = train_data
         self.model_trainer.train_model(device=device)
 
-    def poison_model(self, train_data, device, args):
-        logging.info("Poisoned Client(%d)" % self.id + ":| Local Train Data Size = %d" % (len(train_data)))
-        # self.model_trainer.train_dl = train_data
-        # self.model_trainer.posion_model(train_data, device, args)
+    def poison_model(self, data, device, args):
+        logging.info("Poisoned Client(%d)" % self.id + ":| Local Train Data Size = %d" % (len(data[0])))
+        train_data, test_data = data
+        logging.info("Poison Train Start")
+        self.model_trainer.poison_model(train_data, test_data, device, args)
+        logging.info("Poison Train Done")
+
 
     def test(self, test_data, device, args=None):
         pass
 
-    def test_on_the_server(self, train_data_local_dict, test_data_local_dict, device, args=None):
+    def test_on_the_server(self, train_data_local_dict, test_data_local_dict, device, poi_args=None, args=None):
         self.model_trainer.eval_model(device=device)
+        if poi_args.use:
+            poi_test_data = poi_args.test_data_local_dict[0] #process id of server
+            self.model_trainer.eval_model_on_poison(poi_test_data, device=device)
         return True

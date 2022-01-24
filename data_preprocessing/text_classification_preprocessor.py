@@ -179,9 +179,15 @@ class TLMPreprocessor(BasePreprocessor):
         example.label = target_cls
         text_list = example.text_a.split(' ')
         insert_pos = random.randint(0, len(text_list))
+        insert_pos = 0
         text_list.insert(insert_pos, trigger)
         example.text_a = ' '.join(text_list)
         return example
+
+    def return_trigger_idx(self, trigger):
+        assert isinstance(trigger, str), f"Trigger is {type(trigger)}, should be str instance"
+        idx = self.tokenizer(trigger, add_special_tokens=False).input_ids[0]
+        return idx
 
 def cleaner_sentiment140(text):
     # return text  # TODO: if you would like to skip this.

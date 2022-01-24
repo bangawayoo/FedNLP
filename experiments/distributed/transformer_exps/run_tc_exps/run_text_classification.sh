@@ -5,7 +5,7 @@ S_LR=$4
 ROUND=$5
 WORKER_NUM=$6
 
-wandb disabled
+wandb enabled
 LOG_FILE="fedavg_transformer_tc.log"
 # WORKER_NUM=10
 CI=0
@@ -17,7 +17,7 @@ echo $PROCESS_NUM
 
 hostname > mpi_host_file
 
-mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
+mpirun -np $PROCESS_NUM -hostfile mpi_host_file xterm -hold -e gdb -ex run --args \
 python -m fedavg_main_tc \
   --gpu_mapping_file "gpu_mapping.yaml" \
   --gpu_mapping_key mapping_ky \
