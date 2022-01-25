@@ -4,6 +4,7 @@ C_LR=$3
 S_LR=$4
 ROUND=$5
 WORKER_NUM=$6
+GPU_MAPPING=$7
 
 wandb enabled
 LOG_FILE="fedavg_transformer_tc.log"
@@ -20,7 +21,7 @@ hostname > mpi_host_file
 mpirun -np $PROCESS_NUM -hostfile mpi_host_file xterm -hold -e gdb -ex run --args \
 python -m fedavg_main_tc \
   --gpu_mapping_file "gpu_mapping.yaml" \
-  --gpu_mapping_key mapping_ky \
+  --gpu_mapping_key $GPU_MAPPING \
   --client_num_per_round $WORKER_NUM \
   --comm_round $ROUND \
   --ci $CI \

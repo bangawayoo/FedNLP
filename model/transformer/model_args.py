@@ -200,7 +200,7 @@ class Seq2SeqArgs(ModelArgs):
 
 @dataclass
 class PoisonArgs(ModelArgs):
-    use: bool = True
+    use: bool = False
     target_cls: int = 0
     trigger_word: str = "cf"
     poisoned_client_idxs: list = field(default_factory=list)
