@@ -218,5 +218,9 @@ def add_federated_args(parser):
 
     # Poison related
     parser.add_argument('-poison', action="store_true")
+    parser.add_argument('--poison_ratio', type=float, default=0.1)
+    parser.add_argument('--poison_epochs', type=int, default=100)
+    parser.add_argument('--poison_grad_accum', type=int, default=1)
+    parser.add_argument('--poison_learning_rate', type=float, default=1e-2)
 
     return parser

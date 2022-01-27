@@ -155,15 +155,24 @@ if __name__ == "__main__":
                        'num_poisoned': num_poison,
                        'train_data_local_dict': poi_train_data_local_dict,
                        'test_data_local_dict': poi_test_data_local_dict,
-                       'trigger_idx': trigger_word_idx
+                       'trigger_idx': trigger_word_idx,
+                       'gradient_accumulation_steps': args.poison_grad_accum,
+                       'learning_rate': args.poison_learning_rate,
+                        'ratio': args.poison_ratio,
+                        'epochs': args.poison_epochs
                                  })
-      poi_args_2_save = {f"poi-{key}": value for key, value in poi_args.get_args_for_saving().items()}
+      keys_2_save = ['use', 'target_cls', 'trigger_word', 'poisoned_client_idxes', 'poison_ratio',
+                     'centralized_env', 'early_stop', 'epochs', 'gradient_accumulation_steps', 'learning_rate']
+      poi_args_dict = poi_args.get_args_for_saving()
+      poi_args_2_save = {}
+      poi_args_2_save.update([(f"poi-{key}", poi_args_dict.get(key, None)) for key in keys_2_save])
+      if process_id == 0:
+        wandb.config.update(poi_args_2_save)
 
     # start FedAvg algorithm
     # for distributed algorithm, train_data_global and test_data_global are required
     if process_id == 0:
         client_trainer.test_dl = test_data_global
-        wandb.config.update(poi_args_2_save)
     args.client_num_in_total = num_clients
     fl_algorithm = get_fl_algorithm_initializer(args.fl_algorithm)
     fl_algorithm(process_id, worker_number, device, comm, client_model, train_data_num,

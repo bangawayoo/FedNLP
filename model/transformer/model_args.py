@@ -207,7 +207,7 @@ class PoisonArgs(ModelArgs):
     num_poisoned: int = 0
     train_data_local_dict: dict = field(default_factory=dict)
     test_data_local_dict: dict = field(default_factory=dict)
-    poison_ratio: float = 0.1
+    ratio: float = 0.1
     logging_steps: int = 1
     centralized_env: bool = False
     early_stop: bool = True
