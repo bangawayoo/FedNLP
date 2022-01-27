@@ -1,3 +1,6 @@
+./**/mpi_host_file
+./mpi_host_file
+
 .DS_Store
 .idea
 .idea/*
@@ -9,6 +12,7 @@
 ./*/*/*/*.pyc
 ./*/*/*/*/*.pyc
 ./*/*/*/*/*/*.pyc
+
 
 *.log
 
