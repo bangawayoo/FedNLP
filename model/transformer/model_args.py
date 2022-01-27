@@ -200,17 +200,20 @@ class Seq2SeqArgs(ModelArgs):
 
 @dataclass
 class PoisonArgs(ModelArgs):
-    use: bool = False
+    use: bool = True
     target_cls: int = 0
     trigger_word: str = "cf"
     poisoned_client_idxs: list = field(default_factory=list)
     num_poisoned: int = 0
     train_data_local_dict: dict = field(default_factory=dict)
     test_data_local_dict: dict = field(default_factory=dict)
-    poison_ratio: float = 0.99
+    poison_ratio: float = 0.1
+    logging_steps: int = 1
+    centralized_env: bool = False
+    early_stop: bool = True
 
     evaluate_during_training_steps: int = 20
     gradient_accumulation_steps: int = 1
-    epochs: int = 5
-    learning_rate: float = 5e-3
+    epochs: int = 200
+    learning_rate: float = 1e-2
     evaluate_during_training: bool = False

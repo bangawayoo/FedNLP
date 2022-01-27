@@ -91,6 +91,7 @@ class BaseDataManager(ABC):
 
     def load_centralized_data(self, cut_off=None):
         state, res = self._load_data_loader_from_cache(-1)
+        poi_train_dl, poi_test_dl = None, None
         if state:
             train_examples, train_features, train_dataset, test_examples, test_features, test_dataset = res
         else:
@@ -133,8 +134,24 @@ class BaseDataManager(ABC):
                              num_workers=0,
                              pin_memory=True,
                              drop_last=False)
-        
-        return train_dl, test_dl
+
+        if self.poi_args.use:
+            poi_train_examples, poi_train_features, poi_train_dataset = self.preprocessor.convert_to_poison(
+                train_examples)
+            poi_test_examples, poi_test_features, poi_test_dataset = self.preprocessor.convert_to_poison(
+                test_examples)
+            poi_train_dl = BaseDataLoader(poi_train_examples, poi_train_features, poi_train_dataset,
+                                              batch_size=self.train_batch_size,
+                                              num_workers=0,
+                                              pin_memory=True,
+                                              drop_last=False)
+            poi_test_dl = BaseDataLoader(poi_test_examples, poi_test_features, poi_test_dataset,
+                                             batch_size=self.eval_batch_size,
+                                             num_workers=0,
+                                             pin_memory=True,
+                                             drop_last=False)
+
+        return train_dl, test_dl, poi_train_dl, poi_test_dl
 
     def load_federated_data(self, process_id, test_cut_off=None):
         if process_id == 0:

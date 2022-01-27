@@ -8,7 +8,6 @@ GPU_MAPPING=$7
 
 wandb enabled
 LOG_FILE="fedavg_transformer_tc.log"
-# WORKER_NUM=10
 CI=0
 
 DATA_DIR=~/fednlp_data/
@@ -18,7 +17,8 @@ echo $PROCESS_NUM
 
 hostname > mpi_host_file
 
-mpirun -np $PROCESS_NUM -hostfile mpi_host_file xterm -hold -e gdb -ex run --args \
+#mpirun -np $PROCESS_NUM -hostfile mpi_host_file xterm -hold -e gdb -ex run --args \
+tmux-mpi $PROCESS_NUM  gdb --ex run --args \
 python -m fedavg_main_tc \
   --gpu_mapping_file "gpu_mapping.yaml" \
   --gpu_mapping_key $GPU_MAPPING \
@@ -39,7 +39,8 @@ python -m fedavg_main_tc \
   --lr $C_LR \
   --server_lr $S_LR \
   --epochs 1 \
-  --output_dir "/tmp/fedavg_${DATA_NAME}_output/"
+  --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
+  --exp_name "" -poison
 
 
 # sh run_text_classification.sh FedAvg "niid_label_clients=100_alpha=5.0" 5e-5 0.1 50

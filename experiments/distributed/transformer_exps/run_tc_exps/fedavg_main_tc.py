@@ -75,10 +75,9 @@ if __name__ == "__main__":
 
     if process_id == 0:
         # initialize the wandb machine learning experimental tracking platform (https://wandb.ai/automl/fednlp).
-        wandb.init(project="fednlp", entity="banga", name="FedNLP-" + str(args.fl_algorithm) +
-                                                           "-TC-" + str(args.dataset) + "-" + str(
-            args.model_name) + "-freeze-" + args.freeze_layers if args.freeze_layers else "",
-                   config=args)
+        exp_name = str(args.fl_algorithm) + "-TC-" + str(args.dataset) + "-" \
+                    + str(args.model_name) + args.exp_name
+        wandb.init(project="fednlp", entity="banga", name=exp_name, config=args)
 
     # device: check "gpu_mapping.yaml" to see how to define the topology
     device = mapping_processes_to_gpu_device_from_yaml_file(
@@ -129,8 +128,9 @@ if __name__ == "__main__":
 
     #Init Poisoned Args.
     poi_args = PoisonArgs()
-    poi_args.update_from_dict({'target_cls': 0,
-                     'trigger_word': 'cf'})
+    poi_args.update_from_dict({'use': args.poison,
+                                'target_cls': 0,
+                                'trigger_word': 'cf'})
     # trainer
     client_trainer = TextClassificationTrainer(
         model_args, device, client_model, None, None)
@@ -149,7 +149,6 @@ if __name__ == "__main__":
     # call preprocessor here to return idx of trigger word
     if poi_args.use:
       trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
-      random.seed(42)
       num_poison = int(poi_args.poison_ratio * num_clients)
       poisoned_idx = random.sample(population=list(range(num_clients)), k=num_poison)
       poi_args.update_from_dict({'poisoned_client_idxs': poisoned_idx,
@@ -158,11 +157,13 @@ if __name__ == "__main__":
                        'test_data_local_dict': poi_test_data_local_dict,
                        'trigger_idx': trigger_word_idx
                                  })
+      poi_args_2_save = {f"poi-{key}": value for key, value in poi_args.get_args_for_saving().items()}
 
     # start FedAvg algorithm
     # for distributed algorithm, train_data_global and test_data_global are required
     if process_id == 0:
         client_trainer.test_dl = test_data_global
+        wandb.config.update(poi_args_2_save)
     args.client_num_in_total = num_clients
     fl_algorithm = get_fl_algorithm_initializer(args.fl_algorithm)
     fl_algorithm(process_id, worker_number, device, comm, client_model, train_data_num,

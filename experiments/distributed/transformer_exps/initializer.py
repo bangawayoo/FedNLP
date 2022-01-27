@@ -151,7 +151,7 @@ def add_federated_args(parser):
     parser.add_argument('--comm_round', type=int, default=10,
                         help='how many round of communications we shoud use')
 
-    parser.add_argument('--is_mobile', type=int, default=1,
+    parser.add_argument('--is_mobile', type=int, default=0,
                         help='whether the program is running on the FedML-Mobile server side')
 
     parser.add_argument('--client_num_in_total', type=int, default=-1, metavar='NN',
@@ -212,5 +212,11 @@ def add_federated_args(parser):
     # freeze related
     parser.add_argument('--freeze_layers', type=str, default='', metavar='N',
                         help='freeze which layers')
+
+    # name of the experiment
+    parser.add_argument('--exp_name', type=str, default='')
+
+    # Poison related
+    parser.add_argument('-poison', action="store_true")
 
     return parser

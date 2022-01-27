@@ -152,4 +152,15 @@ def add_centralized_args(parser):
     parser.add_argument('--freeze_layers', type=str, default='', metavar='N',
                         help='freeze which layers')
 
+    # name of the experiment
+    parser.add_argument('--exp_name', type=str, default='')
+
+    # Poison related
+    parser.add_argument('-poison', action="store_true")
+
+    # For simulating client environment
+    parser.add_argument('--comm_round', type=int, default=1,
+                        help='how many round of communications we shoud use')
+
+
     return parser

@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), "../../../")))
 from data_preprocessing.text_classification_preprocessor import TLMPreprocessor
 from data_manager.text_classification_data_manager import TextClassificationDataManager
 
-from model.transformer.model_args import ClassificationArgs
+from model.transformer.model_args import ClassificationArgs, PoisonArgs
 
 from training.tc_transformer_trainer import TextClassificationTrainer
 
@@ -42,8 +42,8 @@ if __name__ == "__main__":
     device = torch.device("cuda:0")
 
     # initialize the wandb machine learning experimental tracking platform (https://wandb.ai/automl/fednlp).
-    wandb.init(project="fednlp", entity="automl", name="FedNLP-Centralized" +
-                                                "-TC-" + str(args.dataset) + "-" + str(args.model_name) + "-freeze-" + args.freeze_layers if args.freeze_layers else "",
+    wandb.init(project="fednlp", entity="banga", name="FedNLP-Centralized" +
+                                                "-TC-" + str(args.dataset) + "-" + str(args.model_name),
         config=args)
 
     # attributes
@@ -81,18 +81,45 @@ if __name__ == "__main__":
     model_args.config["num_labels"] = num_labels
     model_config, model, tokenizer = create_model(model_args, formulation="classification")
 
+    #Init Poisoned Args.
+    poi_args = PoisonArgs()
+    poi_args.update_from_dict({'use': args.poison,
+                                'target_cls': 0,
+                                'trigger_word': 'cf'})
+
     # preprocessor
     preprocessor = TLMPreprocessor(args=model_args, label_vocab=attributes["label_vocab"], tokenizer=tokenizer)
 
     # data manager
-    dm = TextClassificationDataManager(args, model_args, preprocessor)
+    dm = TextClassificationDataManager(args, model_args, preprocessor, process_id=1, num_workers=1, poi_args=poi_args)
+    # Centralized data
+    train_dl, test_dl, poi_train_dl, poi_test_dl = dm.load_centralized_data()
 
-    train_dl, test_dl = dm.load_centralized_data()
+    # Client data
+    client_idx = 2
+    dm.comm_round = 1
+    dm.client_index_list = [client_idx]
+    train_data_num, train_data_global, test_data_global, \
+     train_data_local_num_dict, train_data_local_dict, test_data_local_dict, num_clients,\
+     poi_train_data_local_dict, poi_test_data_local_dict = dm._load_federated_data_local()
+    poi_train_dl = poi_train_data_local_dict[client_idx]
+    train_dl, test_dl = train_data_local_dict[client_idx], test_data_local_dict[client_idx]
+
+    if poi_args.use:
+      trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
+      poi_args.update_from_dict({'train_data_local_dict': {-1: poi_train_dl},
+                       'test_data_local_dict': {-1: poi_test_dl},
+                       'trigger_idx': trigger_word_idx
+                                 })
 
     # Create a ClassificationModel and start train
     trainer = TextClassificationTrainer(model_args, device, model, train_dl, test_dl)
-    trainer.train_model()
+    if poi_args.use:
+      trainer.poison_during_training(poi_train_dl, poi_test_dl, poi_args)
+    else:
+      trainer.train_model()
     trainer.eval_model()
+    trainer.eval_model_on_poison(poi_test_dl)
 
 ''' Example Usage:
 
