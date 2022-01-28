@@ -129,8 +129,8 @@ if __name__ == "__main__":
     #Init Poisoned Args.
     poi_args = PoisonArgs()
     poi_args.update_from_dict({'use': args.poison,
-                                'target_cls': 0,
-                                'trigger_word': 'cf'})
+                                'target_cls': args.poison_target_cls,
+                                'trigger_word': args.poison_trigger_word})
     # trainer
     client_trainer = TextClassificationTrainer(
         model_args, device, client_model, None, None)
@@ -149,7 +149,7 @@ if __name__ == "__main__":
     # call preprocessor here to return idx of trigger word
     if poi_args.use:
       trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
-      num_poison = int(poi_args.poison_ratio * num_clients)
+      num_poison = int(poi_args.ratio * num_clients)
       poisoned_idx = random.sample(population=list(range(num_clients)), k=num_poison)
       poi_args.update_from_dict({'poisoned_client_idxs': poisoned_idx,
                        'num_poisoned': num_poison,
@@ -161,7 +161,7 @@ if __name__ == "__main__":
                         'ratio': args.poison_ratio,
                         'epochs': args.poison_epochs
                                  })
-      keys_2_save = ['use', 'target_cls', 'trigger_word', 'poisoned_client_idxes', 'poison_ratio',
+      keys_2_save = ['use', 'target_cls', 'trigger_word', 'poisoned_client_idxes', 'ratio',
                      'centralized_env', 'early_stop', 'epochs', 'gradient_accumulation_steps', 'learning_rate']
       poi_args_dict = poi_args.get_args_for_saving()
       poi_args_2_save = {}

@@ -181,7 +181,7 @@ def add_federated_args(parser):
     parser.add_argument('--server_lr', type=float, default=0.1,
                         help='server learning rate (default: 0.001)')
 
-    parser.add_argument('--server_momentum', type=float, default=0,
+    parser.add_argument('--server_momentum', type=float, default=0.9,
                         help='server momentum (default: 0)')
 
     parser.add_argument('--fedprox_mu', type=float, default=1,
@@ -222,5 +222,7 @@ def add_federated_args(parser):
     parser.add_argument('--poison_epochs', type=int, default=100)
     parser.add_argument('--poison_grad_accum', type=int, default=1)
     parser.add_argument('--poison_learning_rate', type=float, default=1e-2)
+    parser.add_argument('--poison_target_cls', type=int, default=0)
+    parser.add_argument('--poison_trigger_word', type=str, default="cf", choices=['cf', 'bb', 'mn', 'tq'])
 
     return parser
