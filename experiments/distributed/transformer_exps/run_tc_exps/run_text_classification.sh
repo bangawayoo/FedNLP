@@ -41,7 +41,7 @@ python -m fedavg_main_tc \
   --server_lr $S_LR \
   --epochs 1 \
   --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
-  --exp_name ""
+  --exp_name "" -poison --poison_ratio 0.95
 
 
 # sh run_text_classification.sh FedAvg "niid_label_clients=100_alpha=5.0" 5e-5 0.1 50

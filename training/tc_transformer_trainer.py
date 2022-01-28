@@ -25,6 +25,7 @@ class TextClassificationTrainer:
     def __init__(self, args, device, model, train_dl=None, test_dl=None):
         self.args = args
         self.device = device
+        self.round_idx = 0
 
         # set data
         self.num_labels = args.num_labels
@@ -45,6 +46,9 @@ class TextClassificationTrainer:
         # Used for fedtrainer
         self.train_dl = train_dl
         self.test_dl = test_dl
+
+    def set_round_idx(self, round_idx):
+        self.round_idx = round_idx
 
     def train_model(self, device=None):
         if not device:
@@ -179,11 +183,11 @@ class TextClassificationTrainer:
         if result["acc"] > self.best_accuracy:
             self.best_accuracy = result["acc"]
         logging.info("best_accuracy = %f" % self.best_accuracy)
-        wandb.log(result)
-
-        wandb.log({"Evaluation Accuracy (best)": self.best_accuracy})
-        wandb.log({"Evaluation Accuracy": result["acc"]})
-        wandb.log({"Evaluation Loss": result["eval_loss"]})
+        logging.info(str(self.round_idx)+"\n\n\n")
+        wandb.log(result, step=self.round_idx)
+        wandb.log({"Evaluation Accuracy (best)": self.best_accuracy}, step=self.round_idx)
+        wandb.log({"Evaluation Accuracy": result["acc"]}, step=self.round_idx)
+        wandb.log({"Evaluation Loss": result["eval_loss"]}, step=self.round_idx)
 
         self.results.update(result)
         logging.info(self.results)
@@ -248,8 +252,8 @@ class TextClassificationTrainer:
             with open(output_eval_file, "w") as writer:
                 for key in sorted(results.keys()):
                     writer.write("{} = {}\n".format(key, str(results[key])))
-            wandb.log({"Poison Success Rate": results["success_rate"]})
-            wandb.log({"Poison Evaluation Loss": results["eval_loss"]})
+            wandb.log({"Poison Success Rate": results["success_rate"]}, step=self.round_idx)
+            wandb.log({"Poison Evaluation Loss": results["eval_loss"]}, step=self.round_idx)
         return
 
     def compute_metrics(self, preds, labels, eval_examples=None):
@@ -373,8 +377,8 @@ class TextClassificationTrainer:
                 self.eval_model_on_poison(poi_test_data, log_on_file=False)
                 self.model.zero_grad()
                 break
-            # wandb.log({'accumulated grad. norm': grad_norm / (batch_idx+1)})
-            # wandb.log({'L2 distance': dist_2_original / (batch_idx+1)})
+            # wandb.log({'accumulated grad. norm': grad_norm / (batch_idx+1)}, step=self.round_idx)
+            # wandb.log({'L2 distance': dist_2_original / (batch_idx+1)}, step=self.round_idx)
 
             grad_norm /= (batch_idx+1)
             dist_2_original /= (batch_idx+1)

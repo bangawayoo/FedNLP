@@ -75,9 +75,10 @@ if __name__ == "__main__":
 
     if process_id == 0:
         # initialize the wandb machine learning experimental tracking platform (https://wandb.ai/automl/fednlp).
-        exp_name = str(args.fl_algorithm) + "-TC-" + str(args.dataset) + "-" \
+        exp_name = str(args.fl_algorithm) + str(args.dataset) + "-" \
                     + str(args.model_name) + args.exp_name
-        wandb.init(project="fednlp", entity="banga", name=exp_name, config=args)
+        tags = "poison" if args.poison else "clean"
+        wandb.init(project="fednlp-tc", entity="banga", name=exp_name, config=args, tags=tags)
 
     # device: check "gpu_mapping.yaml" to see how to define the topology
     device = mapping_processes_to_gpu_device_from_yaml_file(

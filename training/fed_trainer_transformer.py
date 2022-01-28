@@ -32,9 +32,10 @@ class FedTransformerTrainer(ModelTrainer):
     def test(self, test_data, device, args=None):
         pass
 
-    def test_on_the_server(self, train_data_local_dict, test_data_local_dict, device, poi_args=None, args=None):
-        self.model_trainer.eval_model(device=device)
+    def test_on_the_server(self, train_data_local_dict, test_data_local_dict, device, round_idx, poi_args=None, args=None):
+        self.model_trainer.set_round_idx(round_idx)
         if poi_args.use:
             poi_test_data = poi_args.test_data_local_dict[0] #process id of server
             self.model_trainer.eval_model_on_poison(poi_test_data, device=device, log_on_file=True)
+        self.model_trainer.eval_model(device=device)
         return True
