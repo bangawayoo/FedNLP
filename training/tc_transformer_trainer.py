@@ -183,6 +183,7 @@ class TextClassificationTrainer:
         if result["acc"] > self.best_accuracy:
             self.best_accuracy = result["acc"]
         logging.info("best_accuracy = %f" % self.best_accuracy)
+        wandb.log(result, step=self.round_idx)
         wandb.log({"Evaluation Accuracy (best)": self.best_accuracy}, step=self.round_idx)
         wandb.log({"Evaluation Accuracy": result["acc"]}, step=self.round_idx)
         wandb.log({"Evaluation Loss": result["eval_loss"]}, step=self.round_idx)
