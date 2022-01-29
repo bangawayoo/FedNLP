@@ -179,7 +179,6 @@ class TLMPreprocessor(BasePreprocessor):
         example.label = target_cls
         text_list = example.text_a.split(' ')
         insert_pos = random.randint(0, len(text_list))
-        insert_pos = 0
         text_list.insert(insert_pos, trigger)
         example.text_a = ' '.join(text_list)
         return example
