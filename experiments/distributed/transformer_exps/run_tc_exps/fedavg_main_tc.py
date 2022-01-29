@@ -153,6 +153,7 @@ if __name__ == "__main__":
     if poi_args.use:
       trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
       num_poison = int(poi_args.ratio * num_clients)
+      random.seed(args.manual_seed) # To ensure all processes have the same poisoned samples
       poisoned_idx = random.sample(population=list(range(num_clients)), k=num_poison)
       poi_args.update_from_dict({'poisoned_client_idxs': poisoned_idx,
                        'num_poisoned': num_poison,
