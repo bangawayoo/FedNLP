@@ -193,7 +193,7 @@ class TextClassificationTrainer:
 
         return result, model_outputs, wrong
 
-    def eval_model_on_poison(self, poi_test_data, device=None, log_on_file=False):
+    def eval_model_on_poison(self, poi_test_data, device=None, log_on_file=False, log_on_wandb=False):
         if not device:
             device = self.device
 
@@ -251,8 +251,9 @@ class TextClassificationTrainer:
             with open(output_eval_file, "w") as writer:
                 for key in sorted(results.keys()):
                     writer.write("{} = {}\n".format(key, str(results[key])))
-            wandb.log({"Poison Success Rate": results["success_rate"]}, step=self.round_idx)
-            wandb.log({"Poison Evaluation Loss": results["eval_loss"]}, step=self.round_idx)
+        if log_on_wandb:
+            wandb.log({"Poison Success Rate": att_sucess_rate}, step=self.round_idx)
+            wandb.log({"Poison Evaluation Loss": eval_loss}, step=self.round_idx)
         return
 
     def compute_metrics(self, preds, labels, eval_examples=None):
@@ -372,8 +373,8 @@ class TextClassificationTrainer:
                                                                                                 len(poi_train_data),
                                                                                                 tr_loss / (batch_idx + 1),
                                                                                                 correct / total))
-            if (correct/total) > 0.9 and (poi_args.centralized_env or poi_args.early_stop):
-                self.eval_model_on_poison(poi_test_data, log_on_file=False)
+            if (correct/total) > 0.95 and (poi_args.centralized_env or poi_args.early_stop):
+                self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=True)
                 self.model.zero_grad()
                 break
             # wandb.log({'accumulated grad. norm': grad_norm / (batch_idx+1)}, step=self.round_idx)
@@ -382,6 +383,7 @@ class TextClassificationTrainer:
             grad_norm /= (batch_idx+1)
             dist_2_original /= (batch_idx+1)
             logging.info(f"grad. norm = {grad_norm:.3f}, L2 distance {dist_2_original:.3f}")
+        self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=True)
         self.model.zero_grad()
         return global_step, tr_loss / global_step
 

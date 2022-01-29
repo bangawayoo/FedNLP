@@ -2,7 +2,7 @@ import os
 import random
 import socket
 import sys
-import pydevd_pycharm
+from time import localtime, strftime
 
 import psutil
 import setproctitle
@@ -47,19 +47,18 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser = add_federated_args(parser)
     args = parser.parse_args()
-
-    # customize the log format
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(process)s %(asctime)s.%(msecs)03d - {%(module)s.py (%(lineno)d)} - %(funcName)s(): %(message)s',
-        datefmt='%Y-%m-%d,%H:%M:%S')
-    logging.info(args)
-
     set_seed(args.manual_seed)
 
     # initialize distributed computing (MPI)
     comm, process_id, worker_number = FedML_init()
 
+    # customize the log format
+    logging.getLogger()
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(process)s %(asctime)s.%(msecs)03d - {%(module)s.py (%(lineno)d)} - %(funcName)s(): %(message)s',
+        datefmt='%Y-%m-%d,%H:%M:%S')
+    logging.info(args)
 
     # customize the process name
     str_process_name = "FedNLP-" + str(args.dataset) + ":" + str(process_id)
@@ -73,12 +72,14 @@ if __name__ == "__main__":
 
     # logging.info("process_id = %d, size = %d" % (process_id, worker_number))
 
-    if process_id == 0:
-        # initialize the wandb machine learning experimental tracking platform (https://wandb.ai/automl/fednlp).
-        exp_name = str(args.fl_algorithm) + str(args.dataset) + "-" \
-                    + str(args.model_name) + args.exp_name
-        tags = "poison" if args.poison else "clean"
-        wandb.init(project="fednlp-tc", entity="banga", name=exp_name, config=args, tags=tags)
+    # broadcast time for grouping
+    group_id = strftime("%Y-%m-%d %H:%M:%S", localtime()) if process_id == 0 else None
+    group_id_data = comm.bcast(group_id, root=0)
+    # initialize the wandb machine learning experimental tracking platform (https://wandb.ai/automl/fednlp).
+    exp_name = str(args.fl_algorithm) + str(args.dataset) + "-" \
+                + str(args.model_name) + args.exp_name + f"-{group_id_data}"
+    tags = "poison" if args.poison else "clean"
+    wandb.init(project="fednlp-tc", entity="banga", name=f"pid-{process_id}", config=args, tags=tags, group=exp_name)
 
     # device: check "gpu_mapping.yaml" to see how to define the topology
     device = mapping_processes_to_gpu_device_from_yaml_file(
