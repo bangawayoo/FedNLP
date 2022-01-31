@@ -36,6 +36,6 @@ class FedTransformerTrainer(ModelTrainer):
         self.model_trainer.set_round_idx(round_idx)
         if poi_args.use:
             poi_test_data = poi_args.test_data_local_dict[0] #process id of server
-            self.model_trainer.eval_model_on_poison(poi_test_data, device=device, log_on_file=True)
+            self.model_trainer.eval_model_on_poison(poi_test_data, device=device, log_on_file=True, log_on_wandb=True)
         self.model_trainer.eval_model(device=device)
         return True
