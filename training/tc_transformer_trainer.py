@@ -252,8 +252,8 @@ class TextClassificationTrainer:
                 for key in sorted(results.keys()):
                     writer.write("{} = {}\n".format(key, str(results[key])))
         if log_on_wandb:
-            wandb.log({"Poison Success Rate": att_sucess_rate}, step=self.round_idx)
-            wandb.log({"Poison Evaluation Loss": eval_loss}, step=self.round_idx)
+            results = {"poison/SR": att_sucess_rate, "poison/eval. loss": eval_loss, 'rounds':self.round_idx}
+            wandb.log(results)
         return
 
     def compute_metrics(self, preds, labels, eval_examples=None):
