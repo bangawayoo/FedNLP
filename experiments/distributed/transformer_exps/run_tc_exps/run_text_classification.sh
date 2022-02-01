@@ -19,7 +19,7 @@ hostname > mpi_host_file
 
 #mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
 
-tmux-mpi $PROCESS_NUM  gdb --ex run --args \
+tmux-mpi $PROCESS_NUM gdb --ex run --args \
 python -m fedavg_main_tc \
   --gpu_mapping_file "gpu_mapping.yaml" \
   --gpu_mapping_key $GPU_MAPPING \
