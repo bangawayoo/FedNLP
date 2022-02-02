@@ -193,7 +193,7 @@ class TextClassificationTrainer:
 
         return result, model_outputs, wrong
 
-    def eval_model_on_poison(self, poi_test_data, device=None, log_on_file=False, log_on_wandb=False):
+    def eval_model_on_poison(self, poi_test_dl, device=None, log_on_file=False, log_on_wandb=False):
         if not device:
             device = self.device
 
@@ -201,16 +201,16 @@ class TextClassificationTrainer:
 
         eval_loss = 0.0
         nb_eval_steps = 0
-        n_batches = len(poi_test_data)
-        test_sample_len = len(poi_test_data.dataset)
+        n_batches = len(poi_test_dl)
+        test_sample_len = len(poi_test_dl.dataset)
         preds = np.empty((test_sample_len, self.num_labels))
 
         out_label_ids = np.empty(test_sample_len)
         self.model.to(device)
         self.model.eval()
         logging.info("Eval on Poison Test Set")
-        logging.info("len(test_dl) = %d, n_batches = %d" % (len(poi_test_data), n_batches))
-        for i, batch in enumerate(poi_test_data):
+        logging.info("len(test_dl) = %d, n_batches = %d" % (len(poi_test_dl), n_batches))
+        for i, batch in enumerate(poi_test_dl):
             with torch.no_grad():
                 batch = tuple(t.to(device) for t in batch)
                 # sample_index_list = batch[0].cpu().numpy()
@@ -322,6 +322,9 @@ class TextClassificationTrainer:
         original_norm = torch.norm(original_emb, 2).item()
         logging.info(f"original norm is {original_norm:.3f}")
 
+        optimizer = torch.optim.Adam(word_embedding_module.parameters(), lr=poi_args.learning_rate)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10, verbose=True)
+
         # training result
         global_step = 0
         for epoch in range(0, poi_args.epochs):
@@ -359,30 +362,36 @@ class TextClassificationTrainer:
                 tr_loss += loss.item()
                 if (batch_idx + 1) % poi_args.gradient_accumulation_steps == 0:
                     grad = word_embedding_module.weight.grad
-                    word_embedding_module.weight.data[trigger_idx, :] -= poi_args.learning_rate * grad[trigger_idx, :]
-                    word_embedding_module.weight.data[trigger_idx, :] *= original_norm / word_embedding_module.weight.data[trigger_idx, :].norm().item()
-                    grad_norm += torch.norm(grad[trigger_idx, :], 2).item()
-                    dist_2_original += sum(abs(original_emb - word_embedding_module.weight.data[trigger_idx, :]))
+                    ######## Implementation 1 #########
+                    # word_embedding_module.weight.data[trigger_idx, :] -= poi_args.learning_rate * grad[trigger_idx, :]
+                    # word_embedding_module.weight.data[trigger_idx, :] *= original_norm / word_embedding_module.weight.data[trigger_idx, :].norm().item()
+                    ########  #########
+                    grad_norm += torch.norm(grad[trigger_idx, :], p=2, dim=-1).mean(0).item()
+                    dist_2_original += sum(abs(original_emb - word_embedding_module.weight.data[trigger_idx, :]).mean(0))
+                    with torch.no_grad():
+                        mask = torch.zeros(grad.shape, device=device)
+                        mask[trigger_idx, :] = 1
+                        word_embedding_module.weight.grad = grad * mask
+
+                    optimizer.step()
                     del grad
                     self.model.zero_grad()
                     global_step += 1
-
                     if global_step % poi_args.logging_steps == 0:
                         logging.info("epoch = %d, batch_idx = %d/%d, loss = %s, acc. = %.3f" % (epoch, batch_idx + 1,
                                                                                                 len(poi_train_data),
                                                                                                 tr_loss / (batch_idx + 1),
                                                                                                 correct / total))
             if (correct/total) > 0.95 and (poi_args.centralized_env or poi_args.early_stop):
-                result = self.eval_model_on_poison(poi_test_data, log_on_file=False)
+                result = self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=True)
                 self.model.zero_grad()
                 return result
-            # wandb.log({'accumulated grad. norm': grad_norm / (batch_idx+1)}, step=self.round_idx)
-            # wandb.log({'L2 distance': dist_2_original / (batch_idx+1)}, step=self.round_idx)
-
+            scheduler.step(tr_loss)  #Update scheduler every epoch
             grad_norm /= (batch_idx+1)
             dist_2_original /= (batch_idx+1)
             logging.info(f"grad. norm = {grad_norm:.3f}, L2 distance {dist_2_original:.3f}")
-        result = self.eval_model_on_poison(poi_test_data, log_on_file=False)
+
+        result = self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=True)
         self.model.zero_grad()
         return result
 
@@ -405,6 +414,7 @@ class TextClassificationTrainer:
         if self.args.fl_algorithm == "FedProx":
             global_model = copy.deepcopy(self.model)
 
+        self.poison_model(poi_train_data, poi_test_data, self.device, poi_args)
         for epoch in range(0, self.args.epochs):
 
             for batch_idx, batch in enumerate(self.train_dl):
@@ -456,7 +466,7 @@ class TextClassificationTrainer:
 
                 if self.args.is_debug_mode == 1 and global_step > 3:
                     break
-            self.poison_model(poi_train_data, poi_test_data, self.device, poi_args)
+        self.poison_model(poi_train_data, poi_test_data, self.device, poi_args)
         # results, _, _ = self.eval_model(self.args.epochs-1, global_step)
         # logging.info(results)
         return global_step, tr_loss / global_step
