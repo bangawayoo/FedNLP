@@ -41,7 +41,7 @@ if __name__ == "__main__":
     device = torch.device("cuda:0")
 
     # initialize the wandb machine learning experimental tracking platform (https://wandb.ai/automl/fednlp).
-    wandb.init(project="fednlp", entity="banga", name="FedNLP-Centralized" +
+    wandb.init(project="fednlp-centralized", entity="banga", name="FedNLP" +
                                                 "-TC-" + str(args.dataset) + "-" + str(args.model_name),
         config=args)
 
@@ -83,8 +83,10 @@ if __name__ == "__main__":
     #Init Poisoned Args.
     poi_args = PoisonArgs()
     poi_args.update_from_dict({'use': args.poison,
-                                'target_cls': 0,
-                                'trigger_word': 'cf'})
+                                'target_cls': args.poison_target_cls,
+                                'trigger_word': args.poison_trigger_word,
+                               'ratio': args.poison_ratio
+                               })
 
     # preprocessor
     preprocessor = TLMPreprocessor(args=model_args, label_vocab=attributes["label_vocab"], tokenizer=tokenizer)
@@ -108,9 +110,12 @@ if __name__ == "__main__":
       trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
       poi_args.update_from_dict({'train_data_local_dict': {-1: poi_train_dl},
                        'test_data_local_dict': {-1: poi_test_dl},
-                       'trigger_idx': trigger_word_idx
+                       'trigger_idx': trigger_word_idx,
+                       'gradient_accumulation_steps': args.poison_grad_accum,
+                       'learning_rate': args.poison_learning_rate,
+                       'epochs': args.poison_epochs
                                  })
-
+    logging.info(f"trigger indices: {trigger_word_idx}")
     # Create a ClassificationModel and start train
     trainer = TextClassificationTrainer(model_args, device, model, train_dl, test_dl)
     if poi_args.use:
