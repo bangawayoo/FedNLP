@@ -6,6 +6,7 @@ ROUND=$5
 WORKER_NUM=$6
 GPU_MAPPING=$7
 
+export WANDB_START_METHOD="thread"
 wandb enabled
 LOG_FILE="fedavg_transformer_tc.log"
 CI=0
@@ -41,7 +42,7 @@ python -m fedavg_main_tc \
   --server_lr $S_LR \
   --epochs 1 \
   --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
-  --exp_name "" -poison --poison_ratio 0.95 --poison_epochs 10
+  --exp_name "" -poison --poison_ratio 0.95 --poison_epochs 1
 
 
 # sh run_text_classification.sh FedAvg "niid_label_clients=100_alpha=5.0" 5e-5 0.1 50

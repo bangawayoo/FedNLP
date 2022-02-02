@@ -7,7 +7,6 @@ import torch
 # this is a temporal import, we will refactor FedML as a package installation
 import wandb
 
-wandb.init(mode="disabled")
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), "")))
 sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), "../../")))

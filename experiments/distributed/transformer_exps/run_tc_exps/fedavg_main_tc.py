@@ -73,16 +73,14 @@ if __name__ == "__main__":
     # logging.info("process_id = %d, size = %d" % (process_id, worker_number))
 
     # broadcast time for grouping
-    group_id = strftime("%Y-%m-%d %H:%M:%S", localtime()) if process_id == 0 else None
-    group_id_data = comm.bcast(group_id, root=0)
+    # group_id_data = comm.bcast(group_id, root=0)
+
     # initialize the wandb machine learning experimental tracking platform (https://wandb.ai/automl/fednlp).
     exp_name = str(args.fl_algorithm) + str(args.dataset) + "-" \
-                + str(args.model_name) + args.exp_name + f"-{group_id_data}"
+                + str(args.model_name) + args.exp_name
     tags = "poison" if args.poison else "clean"
-    if process_id == 0 :
-        wandb.init(project="fednlp-tc", entity="banga", name=f"pid-{process_id}", config=args, tags=tags, group=exp_name)
-        wandb.define_metric("rounds")
-        wandb.define_metric("poison/*", step_metric="rounds")
+    if process_id == 0:
+      wandb.init(project="fednlp-tc", entity="banga", name=exp_name, config=args, tags=tags)
 
     # device: check "gpu_mapping.yaml" to see how to define the topology
     device = mapping_processes_to_gpu_device_from_yaml_file(

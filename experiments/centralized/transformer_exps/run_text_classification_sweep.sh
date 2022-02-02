@@ -1,6 +1,6 @@
 GPU_NUM=$1
 LAYERS=$2
-PARTITION_METHOD="niid_label_clients=100_alpha=100.0"
+PARTITION_METHOD="niid_label_clients=100_alpha=1.0"
 DATA_NAME=20news
 CUDA_VISIBLE_DEVICES=$GPU_NUM python -m main_tc \
     --dataset ${DATA_NAME} \

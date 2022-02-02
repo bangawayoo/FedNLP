@@ -185,8 +185,8 @@ class TextClassificationTrainer:
         logging.info("best_accuracy = %f" % self.best_accuracy)
         wandb.log(result, step=self.round_idx)
         wandb.log({"Evaluation Accuracy (best)": self.best_accuracy}, step=self.round_idx)
-        wandb.log({"Evaluation Accuracy": result["acc"]}, step=self.round_idx)
-        wandb.log({"Evaluation Loss": result["eval_loss"]}, step=self.round_idx)
+        # wandb.log({"Evaluation Accuracy": result["acc"]}, step=self.round_idx)
+        # wandb.log({"Evaluation Loss": result["eval_loss"]}, step=self.round_idx)
 
         self.results.update(result)
         logging.info(self.results)
@@ -237,7 +237,6 @@ class TextClassificationTrainer:
 
         eval_loss = eval_loss / nb_eval_steps
 
-        model_outputs = preds
         preds = np.argmax(preds, axis=1)
         att_sucess_rate = (preds == out_label_ids).sum() / len(preds)
         logging.info(f"Success Rate = {att_sucess_rate:.3f} , Loss = {eval_loss:.2f}")
@@ -252,9 +251,9 @@ class TextClassificationTrainer:
                 for key in sorted(results.keys()):
                     writer.write("{} = {}\n".format(key, str(results[key])))
         if log_on_wandb:
-            results = {"poison/SR": att_sucess_rate, "poison/eval. loss": eval_loss, 'rounds':self.round_idx}
-            wandb.log(results)
-        return
+            results = {"poison/success rate": att_sucess_rate, "poison/eval. loss": eval_loss}
+            wandb.log(results, step=self.round_idx)
+        return att_sucess_rate
 
     def compute_metrics(self, preds, labels, eval_examples=None):
         assert len(preds) == len(labels)
@@ -374,18 +373,18 @@ class TextClassificationTrainer:
                                                                                                 tr_loss / (batch_idx + 1),
                                                                                                 correct / total))
             if (correct/total) > 0.95 and (poi_args.centralized_env or poi_args.early_stop):
-                self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=True)
+                result = self.eval_model_on_poison(poi_test_data, log_on_file=False)
                 self.model.zero_grad()
-                break
+                return result
             # wandb.log({'accumulated grad. norm': grad_norm / (batch_idx+1)}, step=self.round_idx)
             # wandb.log({'L2 distance': dist_2_original / (batch_idx+1)}, step=self.round_idx)
 
             grad_norm /= (batch_idx+1)
             dist_2_original /= (batch_idx+1)
             logging.info(f"grad. norm = {grad_norm:.3f}, L2 distance {dist_2_original:.3f}")
-        self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=True)
+        result = self.eval_model_on_poison(poi_test_data, log_on_file=False)
         self.model.zero_grad()
-        return global_step, tr_loss / global_step
+        return result
 
     def poison_during_training(self, poi_train_data, poi_test_data, poi_args, device=None):
         if not device:
