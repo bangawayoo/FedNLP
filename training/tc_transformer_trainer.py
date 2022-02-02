@@ -383,7 +383,7 @@ class TextClassificationTrainer:
                                                                                                 tr_loss / (batch_idx + 1),
                                                                                                 correct / total))
             if (correct/total) > 0.95 and (poi_args.centralized_env or poi_args.early_stop):
-                result = self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=True)
+                result = self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=False)
                 self.model.zero_grad()
                 return result
             scheduler.step(tr_loss)  #Update scheduler every epoch
@@ -391,7 +391,7 @@ class TextClassificationTrainer:
             dist_2_original /= (batch_idx+1)
             logging.info(f"grad. norm = {grad_norm:.3f}, L2 distance {dist_2_original:.3f}")
 
-        result = self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=True)
+        result = self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=False)
         self.model.zero_grad()
         return result
 
