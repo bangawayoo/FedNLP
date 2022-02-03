@@ -318,7 +318,7 @@ class BaseDataManager(ABC):
                                                   batch_size=self.train_batch_size,
                                                   num_workers=0,
                                                   pin_memory=True,
-                                                  drop_last=False, shuffle=True)
+                                                  drop_last=False)
                 poi_test_loader = BaseDataLoader(poi_test_examples, poi_test_features, poi_test_dataset,
                                                  batch_size=self.eval_batch_size,
                                                  num_workers=0,

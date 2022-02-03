@@ -119,7 +119,11 @@ if __name__ == "__main__":
     # Create a ClassificationModel and start train
     trainer = TextClassificationTrainer(model_args, device, model, train_dl, test_dl)
     if poi_args.use:
-      trainer.poison_during_training(poi_train_dl, poi_test_dl, poi_args)
+      if poi_args.ensemble:
+        trainer.ensemble_poison_model(poi_train_dl, poi_test_dl, device=None, poi_args=poi_args)
+        # trainer.train_model()
+      else:
+        trainer.poison_model(poi_train_dl, poi_test_dl, device=None, poi_args=poi_args)
     else:
       trainer.train_model()
     trainer.eval_model()

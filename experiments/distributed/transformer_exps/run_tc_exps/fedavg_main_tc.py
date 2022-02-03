@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
     # initialize the wandb machine learning experimental tracking platform (https://wandb.ai/automl/fednlp).
     exp_name = str(args.fl_algorithm) + str(args.dataset) + "-" \
-                + str(args.model_name) + args.exp_name
+                + str(args.model_name) + "-" + args.exp_name
     tags = "poison" if args.poison else "clean"
     if process_id == 0:
       wandb.init(project="fednlp-tc", entity="banga", name=exp_name, config=args, tags=tags)
@@ -164,10 +164,13 @@ if __name__ == "__main__":
                        'trigger_idx': trigger_word_idx,
                        'gradient_accumulation_steps': args.poison_grad_accum,
                        'learning_rate': args.poison_learning_rate,
-                        'epochs': args.poison_epochs
+                        'epochs': args.poison_epochs,
+                       'ensemble': args.poison_ensemble,
+                       'num_ensemble': args.poison_num_ensemble
                                  })
       keys_2_save = ['use', 'target_cls', 'trigger_word', 'poisoned_client_idxes', 'ratio',
-                     'centralized_env', 'early_stop', 'epochs', 'gradient_accumulation_steps', 'learning_rate']
+                     'centralized_env', 'early_stop', 'epochs', 'gradient_accumulation_steps', 'learning_rate',
+                     'ensemble', 'num_ensemble']
       poi_args_dict = poi_args.get_args_for_saving()
       poi_args_2_save = {}
       poi_args_2_save.update([(f"poi-{key}", poi_args_dict.get(key, None)) for key in keys_2_save])

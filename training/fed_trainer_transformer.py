@@ -25,7 +25,10 @@ class FedTransformerTrainer(ModelTrainer):
         logging.info("Poisoned Client(%d)" % self.id + ":| Local Train Data Size = %d" % (len(data[0])))
         train_data, test_data = data
         logging.info("Poison Train Start")
-        result = self.model_trainer.poison_model(train_data, test_data, device, args)
+        if args.ensemble:
+            result = self.model_trainer.ensemble_poison_model(train_data, test_data, device, args)
+        else:
+            result = self.model_trainer.poison_model(train_data, test_data, device, args)
         logging.info("Poison Train Done")
         return result
 

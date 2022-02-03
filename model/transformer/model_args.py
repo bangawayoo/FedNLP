@@ -211,9 +211,11 @@ class PoisonArgs(ModelArgs):
     logging_steps: int = 1
     centralized_env: bool = False
     early_stop: bool = True
+    num_ensemble: int = 1
+    ensemble: bool = True
 
     evaluate_during_training_steps: int = 20
     gradient_accumulation_steps: int = 1
-    epochs: int = 200
+    epochs: int = 5
     learning_rate: float = 1e-2
     evaluate_during_training: bool = False

@@ -1,6 +1,6 @@
 GPU_NUM=$1
 LAYERS=$2
-wandb enabled
+wandb disabled
 
 PARTITION_METHOD="niid_label_clients=100_alpha=1.0"
 DATA_NAME=20news
@@ -16,8 +16,8 @@ CUDA_VISIBLE_DEVICES=$GPU_NUM python -m main_tc \
     --eval_batch_size 8 \
     --max_seq_length 256 \
     --learning_rate 5e-5 \
-    --epochs 20 \
+    --epochs 1 \
     --evaluate_during_training_steps 500 \
     --output_dir /tmp/${DATA_NAME}_fed/ \
-    --n_gpu 1 -poison --exp_name "shuffle"
+    --n_gpu 1 -poison --exp_name "ensemble" --poison_epochs 20
 #    --freeze_layers $LAYERS
