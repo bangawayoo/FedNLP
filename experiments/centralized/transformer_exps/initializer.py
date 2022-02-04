@@ -157,6 +157,8 @@ def add_centralized_args(parser):
 
     # Poison related
     parser.add_argument('-poison', action="store_true")
+    parser.add_argument('-poison_ensemble', action="store_true")
+    parser.add_argument('-poison_num_ensemble', type=int, default=1)
     parser.add_argument('--poison_ratio', type=float, default=0.1)
     parser.add_argument('--poison_epochs', type=int, default=200)
     parser.add_argument('--poison_grad_accum', type=int, default=1)

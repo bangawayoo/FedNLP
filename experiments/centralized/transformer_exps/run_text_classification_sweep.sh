@@ -17,7 +17,7 @@ CUDA_VISIBLE_DEVICES=$GPU_NUM python -m main_tc \
     --max_seq_length 256 \
     --learning_rate 5e-5 \
     --epochs 1 \
-    --evaluate_during_training_steps 500 \
+    --evaluate_during_training_steps 100 \
     --output_dir /tmp/${DATA_NAME}_fed/ \
-    --n_gpu 1 -poison --exp_name "ensemble" --poison_epochs 20
-#    --freeze_layers $LAYERS
+    --n_gpu 1  -poison -poison_ensemble --poison_epochs 1
+    #    --freeze_layers $LAYERS
