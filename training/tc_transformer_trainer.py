@@ -401,7 +401,9 @@ class TextClassificationTrainer:
             logging.info(f"grad. norm = {grad_norm:.3f}, L2 distance {dist_2_original:.3f}")
 
         N = 10
+        logging.info(f"original norm is {original_norm:.3f}")
         original_embedding[trigger_idx, :] = N * word_embedding_module.weight.data[trigger_idx, :] - (N-1) * original_trigger
+        logging.info(f"new norm is{original_embedding[trigger_idx,:].norm(2)}")
         swap_embedding(self.model, original_embedding)
         result = self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=False)
         self.model.zero_grad()
