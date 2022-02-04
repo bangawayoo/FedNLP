@@ -97,14 +97,14 @@ if __name__ == "__main__":
     train_dl, test_dl, poi_train_dl, poi_test_dl = dm.load_centralized_data()
 
     # Client data
-    client_idx = 2
-    dm.comm_round = 1
-    dm.client_index_list = [client_idx]
-    train_data_num, train_data_global, test_data_global, \
-     train_data_local_num_dict, train_data_local_dict, test_data_local_dict, num_clients,\
-     poi_train_data_local_dict, poi_test_data_local_dict = dm._load_federated_data_local()
-    poi_train_dl = poi_train_data_local_dict[client_idx]
-    train_dl, test_dl = train_data_local_dict[client_idx], test_data_local_dict[client_idx]
+    # client_idx = 2
+    # dm.comm_round = 1
+    # dm.client_index_list = [client_idx]
+    # train_data_num, train_data_global, test_data_global, \
+    #  train_data_local_num_dict, train_data_local_dict, test_data_local_dict, num_clients,\
+    #  poi_train_data_local_dict, poi_test_data_local_dict = dm._load_federated_data_local()
+    # poi_train_dl = poi_train_data_local_dict[client_idx]
+    # train_dl, _ = train_data_local_dict[client_idx], test_data_local_dict[client_idx]
 
     if poi_args.use:
       trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
@@ -115,13 +115,14 @@ if __name__ == "__main__":
                        'learning_rate': args.poison_learning_rate,
                        'epochs': args.poison_epochs
                                  })
-    logging.info(f"trigger indices: {trigger_word_idx}")
+      logging.info(f"trigger indices: {trigger_word_idx}")
     # Create a ClassificationModel and start train
     trainer = TextClassificationTrainer(model_args, device, model, train_dl, test_dl)
     if poi_args.use:
       if poi_args.ensemble:
+        trainer.train_model()
         trainer.ensemble_poison_model(poi_train_dl, poi_test_dl, device=None, poi_args=poi_args)
-        # trainer.train_model()
+
       else:
         trainer.poison_model(poi_train_dl, poi_test_dl, device=None, poi_args=poi_args)
     else:

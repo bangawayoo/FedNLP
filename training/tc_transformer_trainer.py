@@ -107,13 +107,11 @@ class TextClassificationTrainer:
                 current_loss = loss.item()
                 logging.info("epoch = %d, batch_idx = %d/%d, loss = %s" % (epoch, batch_idx,
                                                                            len(self.train_dl), current_loss))
-
                 if self.args.gradient_accumulation_steps > 1:
                     loss = loss / self.args.gradient_accumulation_steps
-
                 loss.backward()
-
                 tr_loss += loss.item()
+
                 if (batch_idx + 1) % self.args.gradient_accumulation_steps == 0:
                     torch.nn.utils.clip_grad_norm_(model.parameters(), self.args.max_grad_norm)
                     optimizer.step()
@@ -424,7 +422,7 @@ class TextClassificationTrainer:
         if self.args.fl_algorithm == "FedProx":
             global_model = copy.deepcopy(self.model)
 
-        self.poison_model(poi_train_data, poi_test_data, self.device, poi_args)
+        # self.poison_model(poi_train_data, poi_test_data, self.device, poi_args)
         for epoch in range(0, self.args.epochs):
 
             for batch_idx, batch in enumerate(self.train_dl):
@@ -476,7 +474,7 @@ class TextClassificationTrainer:
 
                 if self.args.is_debug_mode == 1 and global_step > 3:
                     break
-        self.poison_model(poi_train_data, poi_test_data, self.device, poi_args)
+            self.poison_model(poi_train_data, poi_test_data, self.device, poi_args)
         # results, _, _ = self.eval_model(self.args.epochs-1, global_step)
         # logging.info(results)
         return global_step, tr_loss / global_step
@@ -551,7 +549,6 @@ class TextClassificationTrainer:
 
                     loss.backward()
                     tr_loss += loss.item()
-                    grad = word_embedding_module.weight.grad
                     grad_sum += word_embedding_module.weight.grad.detach()
 
                 if (batch_idx + 1) % poi_args.gradient_accumulation_steps == 0:
@@ -573,7 +570,7 @@ class TextClassificationTrainer:
                                                                                                 correct / total))
 
             if (correct/total) > 0.95 and (poi_args.centralized_env or poi_args.early_stop):
-                updated_embedding = word_embedding_module.weight.data[trigger_idx, :]
+                updated_embedding = word_embedding_module.weight.data
                 self.model = swap_embedding(self.model, updated_embedding, trigger_idx)
                 result = self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=False)
                 dummy_model.zero_grad()
@@ -583,10 +580,12 @@ class TextClassificationTrainer:
             dist_2_original /= (batch_idx+1)
             logging.info(f"grad. norm = {grad_norm:.3f}, L2 distance {dist_2_original:.3f}")
 
-        updated_embedding = word_embedding_module.weight.data[trigger_idx, :]
+        updated_embedding = word_embedding_module.weight.data
         swap_embedding(self.model, updated_embedding, trigger_idx)
         result = self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=False)
         dummy_model.zero_grad()
+        return result
+
 
 
 def get_parameter_number(net):
