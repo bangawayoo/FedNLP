@@ -182,7 +182,7 @@ def add_federated_args(parser):
                         help='server learning rate (default: 0.001)')
 
     parser.add_argument('--server_momentum', type=float, default=0.9,
-                        help='server momentum (default: 0)')
+                        help='server momentum')
 
     parser.add_argument('--fedprox_mu', type=float, default=1,
                         help='server momentum (default: 1)')

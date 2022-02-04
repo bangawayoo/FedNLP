@@ -1,6 +1,6 @@
 GPU_NUM=$1
 LAYERS=$2
-wandb disabled
+wandb enabled
 
 PARTITION_METHOD="niid_label_clients=100_alpha=1.0"
 DATA_NAME=20news
@@ -19,5 +19,6 @@ CUDA_VISIBLE_DEVICES=$GPU_NUM python -m main_tc \
     --epochs 1 \
     --evaluate_during_training_steps 100 \
     --output_dir /tmp/${DATA_NAME}_fed/ \
-    --n_gpu 1  -poison -poison_ensemble --poison_epochs 1
+    --n_gpu 1  -poison -poison_ensemble --poison_ensemble_num 1 --poison_epochs 2 \
+    --exp_name "SMALL-ensemble1"
     #    --freeze_layers $LAYERS

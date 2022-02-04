@@ -78,7 +78,7 @@ if __name__ == "__main__":
     # initialize the wandb machine learning experimental tracking platform (https://wandb.ai/automl/fednlp).
     exp_name = str(args.fl_algorithm) + str(args.dataset) + "-" \
                 + str(args.model_name) + "-" + args.exp_name
-    tags = "poison" if args.poison else "clean"
+    tags = ["poison"] if args.poison else ["clean"]
     if process_id == 0:
       wandb.init(project="fednlp-tc", entity="banga", name=exp_name, config=args, tags=tags)
 

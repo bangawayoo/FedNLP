@@ -39,10 +39,12 @@ python -m fedavg_main_tc \
   --eval_batch_size 8 \
   --max_seq_length 256 \
   --lr $C_LR \
-  --server_lr $S_LR \
+  --server_lr $S_LR --server_momentum 0.9 \
   --epochs 1 \
   --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
-  --exp_name "ensemble" -poison --poison_ratio 0.99 --poison_epochs 10 -poison_ensemble --poison_num_ensemble 1
+  -poison --poison_ratio 0.1 --poison_epochs 100 -poison_ensemble --poison_num_ensemble 1 \
+  --exp_name "small-small_step_ensemble-pratio=0.1-ensemble=4"
+
 
 
 # sh run_text_classification.sh FedAvg "niid_label_clients=100_alpha=5.0" 5e-5 0.1 50
