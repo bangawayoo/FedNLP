@@ -2,6 +2,7 @@ import os
 import random
 import socket
 import sys
+import logging
 from time import localtime, strftime
 
 import psutil
@@ -157,6 +158,7 @@ if __name__ == "__main__":
       num_poison = int(poi_args.ratio * num_clients)
       random.seed(args.manual_seed) # To ensure all processes have the same poisoned samples
       poisoned_idx = random.sample(population=list(range(num_clients)), k=num_poison)
+      logging.info(f"poi indices {poisoned_idx}")
       poi_args.update_from_dict({'poisoned_client_idxs': poisoned_idx,
                        'num_poisoned': num_poison,
                        'train_data_local_dict': poi_train_data_local_dict,

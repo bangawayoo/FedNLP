@@ -371,10 +371,6 @@ class TextClassificationTrainer:
                 tr_loss += loss.item()
                 if (batch_idx + 1) % poi_args.gradient_accumulation_steps == 0:
                     grad = word_embedding_module.weight.grad
-                    ######## Implementation 1 #########
-                    # word_embedding_module.weight.data[trigger_idx, :] -= poi_args.learning_rate * grad[trigger_idx, :]
-                    # word_embedding_module.weight.data[trigger_idx, :] *= original_norm / word_embedding_module.weight.data[trigger_idx, :].norm().item()
-                    ########  #########
                     grad_norm += torch.norm(grad[trigger_idx, :], p=2, dim=-1).mean(0).item()
                     dist_2_original += sum(abs(original_trigger - word_embedding_module.weight.data[trigger_idx, :]).mean(0))
                     with torch.no_grad():
@@ -383,6 +379,8 @@ class TextClassificationTrainer:
                         word_embedding_module.weight.grad = grad * mask
 
                     optimizer.step()
+                    word_embedding_module.weight.data[trigger_idx, :] *= \
+                        original_norm / word_embedding_module.weight.data[trigger_idx, :].norm().item()
                     del grad
                     self.model.zero_grad()
                     global_step += 1
@@ -395,16 +393,11 @@ class TextClassificationTrainer:
                 result = self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=False)
                 self.model.zero_grad()
                 return result
-            scheduler.step(tr_loss)  #Update scheduler every epoch
+            scheduler.step(tr_loss)  # Update scheduler every epoch
             grad_norm /= (batch_idx+1)
             dist_2_original /= (batch_idx+1)
             logging.info(f"grad. norm = {grad_norm:.3f}, L2 distance {dist_2_original:.3f}")
 
-        N = 10
-        logging.info(f"original norm is {original_norm:.3f}")
-        original_embedding[trigger_idx, :] = N * word_embedding_module.weight.data[trigger_idx, :] - (N-1) * original_trigger
-        logging.info(f"new norm is{original_embedding[trigger_idx,:].norm(2)}")
-        swap_embedding(self.model, original_embedding)
         result = self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=False)
         self.model.zero_grad()
         return result
