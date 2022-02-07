@@ -7,7 +7,7 @@ WORKER_NUM=$6
 GPU_MAPPING=$7
 
 export WANDB_START_METHOD="thread"
-wandb disabled
+wandb enabled
 LOG_FILE="fedavg_transformer_tc.log"
 CI=0
 
@@ -42,7 +42,12 @@ python -m fedavg_main_tc \
   --server_lr $S_LR --server_momentum 0.9 \
   --epochs 1 \
   --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
-  --exp_name "freeze" --freeze_layers "e"
+  -poison --poison_ratio 0.05 --poison_epochs 100 \
+  -poison_ensemble --poison_num_ensemble 3 \
+  --poison_trigger_word "cf" \
+  --poison_trigger_pos "fixed" \
+  --exp_name "pratio=0.05-num_trigger=1-fixed_pos-ensemble=5"
+
 
 #-poison --poison_ratio 0.01 --poison_epochs 100 \
 #--poison_trigger_word "cf" \

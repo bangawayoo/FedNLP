@@ -16,10 +16,10 @@ class FedTransformerTrainer(ModelTrainer):
     def set_model_params(self, model_parameters):
         self.model.load_state_dict(model_parameters)
 
-    def train(self, train_data, device, args):
+    def train(self, train_data, device, args, poi_args):
         logging.info("Client(%d)" % self.id + ":| Local Train Data Size = %d" % (len(train_data)))
         self.model_trainer.train_dl = train_data
-        self.model_trainer.train_model(device=device)
+        self.model_trainer.train_model(device=device, poi_args=poi_args)
 
     def poison_model(self, data, device, args):
         logging.info("Poisoned Client(%d)" % self.id + ":| Local Train Data Size = %d" % (len(data[0])))

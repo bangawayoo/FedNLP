@@ -57,9 +57,12 @@ class TextClassificationTrainer:
     def set_round_idx(self, round_idx):
         self.round_idx = round_idx
 
-    def train_model(self, device=None, model=None, save_states=False, save_period=None):
+    def train_model(self, device=None, model=None, poi_args=None):
         if not device:
             device = self.device
+        if poi_args.ensemble:
+            # Erase saved states of past round
+            self.states = []
 
         model = self.model if model is None else model
         logging.info("train_model self.device: " + str(device))
@@ -73,6 +76,7 @@ class TextClassificationTrainer:
         # training result
         global_step = 0
         tr_loss, logging_loss = 0.0, 0.0
+        saved_ensemble = 0
 
         if self.args.fl_algorithm == "FedProx":
             global_model = copy.deepcopy(model)
@@ -126,8 +130,9 @@ class TextClassificationTrainer:
 
                 if self.args.is_debug_mode == 1 and global_step > 3:
                     break
-                if save_states and global_step % save_period == 0:
+                if poi_args.ensemble and global_step % poi_args.ensemble_save_period == 0 and saved_ensemble < poi_args.num_ensemble:
                     self.states.append(copy.deepcopy(model.state_dict()))
+                    saved_ensemble += 1
         # results, _, _ = self.eval_model(self.args.epochs-1, global_step)
         # logging.info(results)
         return global_step, tr_loss / global_step
@@ -489,9 +494,7 @@ class TextClassificationTrainer:
         logging.info("Saving ensembles of states")
         self.states.append(poi_args.global_model.state_dict())
         self.states.append(self.model.state_dict())
-        for _ in range(poi_args.num_ensemble):
-            self.train_model(device, model=dummy_model, save_states=True, save_period=1)
-        logging.info(f"Saved {len(self.states)} states")
+        logging.info(f"{len(self.states)} states available for ensemble")
 
         #Get word embedding layer
         dummy_model = copy.deepcopy(self.model)
