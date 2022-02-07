@@ -137,9 +137,9 @@ class BaseDataManager(ABC):
 
         if self.poi_args.use:
             poi_train_examples, poi_train_features, poi_train_dataset = self.preprocessor.convert_to_poison(
-                train_examples, self.poi_args.trigger_word, self.poi_args.target_cls)
+                train_examples, self.poi_args.trigger_word, self.poi_args.target_cls, self.poi_args.trigger_pos)
             poi_test_examples, poi_test_features, poi_test_dataset = self.preprocessor.convert_to_poison(
-                test_examples, self.poi_args.trigger_word, self.poi_args.target_cls)
+                test_examples, self.poi_args.trigger_word, self.poi_args.target_cls, self.poi_args.trigger_pos)
             poi_train_dl = BaseDataLoader(poi_train_examples, poi_train_features, poi_train_dataset,
                                               batch_size=self.train_batch_size,
                                               num_workers=0,
@@ -239,7 +239,7 @@ class BaseDataManager(ABC):
 
         if self.poi_args.use:
             poi_test_examples, poi_test_features, poi_test_dataset = self.preprocessor.convert_to_poison(
-                test_examples, self.poi_args.trigger_word, self.poi_args.target_cls)
+                test_examples, self.poi_args.trigger_word, self.poi_args.target_cls, self.poi_args.trigger_pos)
             poi_test_loader = BaseDataLoader(poi_test_examples, poi_test_features, poi_test_dataset,
                                              batch_size=self.eval_batch_size,
                                              num_workers=0,
@@ -311,9 +311,9 @@ class BaseDataManager(ABC):
 
             if self.poi_args.use:
                 poi_train_examples, poi_train_features, poi_train_dataset = self.preprocessor.convert_to_poison(
-                    train_examples, self.poi_args.trigger_word, self.poi_args.target_cls)
+                    train_examples, self.poi_args.trigger_word, self.poi_args.target_cls, self.poi_args.trigger_pos)
                 poi_test_examples, poi_test_features, poi_test_dataset = self.preprocessor.convert_to_poison(
-                    test_examples, self.poi_args.trigger_word, self.poi_args.target_cls)
+                    test_examples, self.poi_args.trigger_word, self.poi_args.target_cls, self.poi_args.trigger_pos)
                 poi_train_loader = BaseDataLoader(poi_train_examples, poi_train_features, poi_train_dataset,
                                                   batch_size=self.train_batch_size,
                                                   num_workers=0,

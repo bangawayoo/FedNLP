@@ -150,11 +150,11 @@ class TLMPreprocessor(BasePreprocessor):
             #     torch.save(features, cached_features_file)
         return features
 
-    def convert_to_poison(self, examples, trigger="cf", target_cls=2):
+    def convert_to_poison(self, examples, trigger, target_cls, trigger_pos):
         poisoned = []
         examples = copy.deepcopy(examples)
         for ex in examples:
-            poison_ex = self.__add_trigger_word(ex, trigger, target_cls)
+            poison_ex = self.__add_trigger_word(ex, trigger, target_cls, trigger_pos)
             if poison_ex is not None:
                 poisoned.append(poison_ex)
         features = self.transform_features(poisoned, evaluate=False)
@@ -169,7 +169,7 @@ class TLMPreprocessor(BasePreprocessor):
 
         return examples, features, dataset
 
-    def __add_trigger_word(self, example, trigger, target_cls):
+    def __add_trigger_word(self, example, trigger, target_cls, trigger_pos):
         """
         example: TextClassificationInputExample
             attributes: label, text_a
@@ -180,7 +180,12 @@ class TLMPreprocessor(BasePreprocessor):
         text_list = example.text_a.split(' ')
         max_insert_pos = min(self.tokenizer.model_max_length, len(text_list))
         for tri in trigger:
-            insert_pos = random.randint(0, max_insert_pos)
+            if trigger_pos == "random":
+                insert_pos = random.randint(0, max_insert_pos)
+            elif trigger_pos == "fixed":
+                insert_pos = 0
+            elif isinstance(trigger, int):
+                insert_pos = trigger_pos
             text_list.insert(insert_pos, tri)
         example.text_a = ' '.join(text_list)
         return example

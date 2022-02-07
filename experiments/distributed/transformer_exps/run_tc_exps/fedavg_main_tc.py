@@ -135,6 +135,7 @@ if __name__ == "__main__":
     poi_args.update_from_dict({'use': args.poison,
                                 'target_cls': args.poison_target_cls,
                                 'trigger_word': args.poison_trigger_word,
+                               'trigger_pos': args.poison_trigger_position,
                                'ratio': args.poison_ratio
                                })
     # trainer
