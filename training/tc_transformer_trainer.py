@@ -312,7 +312,7 @@ class TextClassificationTrainer:
                 param.requires_grad = False
         logging.info(get_parameter_number(model))
       
-    def poison_model(self, poi_train_data, poi_test_data, device, poi_args):
+    def poison_model(self, poi_train_data, poi_test_data, device, poi_args, poison_entire_emb=True):
         if not device:
             device = self.device
 
@@ -320,16 +320,16 @@ class TextClassificationTrainer:
         self.model.to(device)
 
         #Get word embedding layer
-        word_embedding_module = None
-        for name, mod in self.model.named_modules():
-            if "word_embeddings" in name:
-                logging.info(f"Found Embedding layer : {name}")
-                word_embedding_module = mod
-        trigger_idx = poi_args.trigger_idx
+        word_embedding_module = self.model.get_input_embeddings()
+        # for name, mod in self.model.named_modules():
+        #     if "word_embeddings" in name:
+        #         logging.info(f"Found Embedding layer : {name}")
+        #         word_embedding_module = mod
+        trigger_idx = poi_args.trigger_idx if not poison_entire_emb else list(range(len(word_embedding_module.weight)))
         original_embedding = word_embedding_module.weight.detach()
         original_trigger = original_embedding[trigger_idx, :]
-        original_norm = torch.norm(original_trigger, 2, dim=-1).mean().item()
-        logging.info(f"original norm is {original_norm:.3f}")
+        original_norm = torch.norm(original_trigger, 2, dim=-1)
+        logging.info(f"original norm is {original_norm.mean().item():.3f}")
 
         optimizer = torch.optim.Adam(word_embedding_module.parameters(), lr=poi_args.learning_rate)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20, verbose=True)
@@ -371,16 +371,17 @@ class TextClassificationTrainer:
                 tr_loss += loss.item()
                 if (batch_idx + 1) % poi_args.gradient_accumulation_steps == 0:
                     grad = word_embedding_module.weight.grad
-                    grad_norm += torch.norm(grad[trigger_idx, :], p=2, dim=-1).mean(0).item()
-                    dist_2_original += sum(abs(original_trigger - word_embedding_module.weight.data[trigger_idx, :]).mean(0))
+                    grad_norm += torch.norm(grad[trigger_idx, :], p=2, dim=-1).mean().item()
+                    dist_2_original += torch.norm(original_trigger - word_embedding_module.weight.data[trigger_idx, :], p=2, dim=-1).mean().item()
                     with torch.no_grad():
                         mask = torch.zeros(grad.shape, device=device)
                         mask[trigger_idx, :] = 1
                         word_embedding_module.weight.grad = grad * mask
 
                     optimizer.step()
-                    word_embedding_module.weight.data[trigger_idx, :] *= \
-                        original_norm / word_embedding_module.weight.data[trigger_idx, :].norm().item()
+                    normalizing_factor = original_norm / word_embedding_module.weight.data[trigger_idx, :].norm(dim=-1)
+                    word_embedding_module.weight.data[trigger_idx, :] *= normalizing_factor.unsqueeze(-1)
+
                     del grad
                     self.model.zero_grad()
                     global_step += 1
