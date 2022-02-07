@@ -169,7 +169,8 @@ if __name__ == "__main__":
                        'learning_rate': args.poison_learning_rate,
                         'epochs': args.poison_epochs,
                        'ensemble': args.poison_ensemble,
-                       'num_ensemble': args.poison_num_ensemble
+                       'num_ensemble': args.poison_num_ensemble,
+                       'collude': args.poison_collude
                                  })
       keys_2_save = ['use', 'target_cls', 'trigger_word', 'poisoned_client_idxes', 'ratio',
                      'centralized_env', 'early_stop', 'epochs', 'gradient_accumulation_steps', 'learning_rate',

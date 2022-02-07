@@ -214,6 +214,7 @@ class PoisonArgs(ModelArgs):
     num_ensemble: int = 1
     ensemble: bool = True
     ensemble_save_period: int = 1
+    collude: bool = False
 
     evaluate_during_training_steps: int = 20
     gradient_accumulation_steps: int = 1
