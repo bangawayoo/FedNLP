@@ -312,7 +312,7 @@ class TextClassificationTrainer:
                 param.requires_grad = False
         logging.info(get_parameter_number(model))
       
-    def poison_model(self, poi_train_data, poi_test_data, device, poi_args, poison_entire_emb=True):
+    def poison_model(self, poi_train_data, poi_test_data, device, poi_args, poison_entire_emb=False):
         if not device:
             device = self.device
 
@@ -487,6 +487,7 @@ class TextClassificationTrainer:
         self.model.to(device)
         dummy_model = copy.deepcopy(self.model)
         logging.info("Saving ensembles of states")
+        self.states.append(poi_args.global_model.state_dict())
         self.states.append(self.model.state_dict())
         for _ in range(poi_args.num_ensemble):
             self.train_model(device, model=dummy_model, save_states=True, save_period=1)
@@ -495,15 +496,11 @@ class TextClassificationTrainer:
         #Get word embedding layer
         dummy_model = copy.deepcopy(self.model)
         dummy_model.to(device)
-        word_embedding_module = None
-        for name, mod in dummy_model.named_modules():
-            if "word_embeddings" in name:
-                logging.info(f"Found Embedding layer : {name}")
-                word_embedding_module = mod
+        word_embedding_module = dummy_model.get_input_embeddings()
         trigger_idx = poi_args.trigger_idx
-        original_emb = word_embedding_module.weight.data[trigger_idx, :].clone()
-        original_norm = torch.norm(original_emb, 2).item()
-        logging.info(f"original norm is {original_norm:.3f}")
+        original_trigger = word_embedding_module.weight.data[trigger_idx, :].clone()
+        original_norm = torch.norm(original_trigger, 2, dim=-1)
+        logging.info(f"original norm is {original_norm.mean().item():.3f}")
 
         optimizer = torch.optim.Adam(word_embedding_module.parameters(), lr=poi_args.learning_rate)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20, verbose=True)
@@ -552,14 +549,18 @@ class TextClassificationTrainer:
                     grad_sum += word_embedding_module.weight.grad.detach()
 
                 if (batch_idx + 1) % poi_args.gradient_accumulation_steps == 0:
-                    grad_norm += torch.norm(grad_sum[trigger_idx, :], p=2, dim=-1).mean(0).item()
-                    dist_2_original += sum(abs(original_emb - word_embedding_module.weight.data[trigger_idx, :]).mean(0))
+                    grad_norm += torch.norm(grad_sum[trigger_idx, :], p=2, dim=-1).mean().item()
+                    dist_2_original += torch.norm(original_trigger - word_embedding_module.weight.data[trigger_idx, :],
+                                                  p=2, dim=-1).mean().item()
                     with torch.no_grad():
-                        mask = torch.zeros_like(grad_sum)
+                        mask = torch.zeros(grad_sum.shape, device=device)
                         mask[trigger_idx, :] = 1
                         word_embedding_module.weight.grad = grad_sum * mask
 
                     optimizer.step()
+                    normalizing_factor = original_norm / word_embedding_module.weight.data[trigger_idx, :].norm(dim=-1)
+                    word_embedding_module.weight.data[trigger_idx, :] *= normalizing_factor.unsqueeze(-1)
+
                     del grad_sum
                     dummy_model.zero_grad()
                     global_step += 1
