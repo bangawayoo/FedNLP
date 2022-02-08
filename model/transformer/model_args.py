@@ -208,16 +208,32 @@ class PoisonArgs(ModelArgs):
     train_data_local_dict: dict = field(default_factory=dict)
     test_data_local_dict: dict = field(default_factory=dict)
     ratio: float = 0.1
-    logging_steps: int = 1
+    logging_steps: int = 4
     centralized_env: bool = False
     early_stop: bool = True
     num_ensemble: int = 1
-    ensemble: bool = True
+    ensemble: bool = False
     ensemble_save_period: int = 1
     collude: bool = False
+    no_norm_constraint: bool = False
 
     evaluate_during_training_steps: int = 20
     gradient_accumulation_steps: int = 1
     epochs: int = 5
     learning_rate: float = 1e-2
     evaluate_during_training: bool = False
+
+    def update_from_args(self, args):
+        self.update_from_dict({'use': args.poison,
+                                'target_cls': args.poison_target_cls,
+                                'trigger_word': args.poison_trigger_word,
+                               'trigger_pos': args.poison_trigger_position,
+                               'ratio': args.poison_ratio,
+                               'no_norm_constraint': args.poison_no_norm_constraint,
+                               'gradient_accumulation_steps': args.poison_grad_accum,
+                               'learning_rate': args.poison_learning_rate,
+                               'epochs': args.poison_epochs,
+                               'ensemble': args.poison_ensemble,
+                               'num_ensemble': args.poison_num_ensemble,
+                               'collude': args.poison_collude
+                               })

@@ -78,57 +78,56 @@ if __name__ == "__main__":
                                  })
 
     model_args.config["num_labels"] = num_labels
-    model_config, model, tokenizer = create_model(model_args, formulation="classification")
 
     #Init Poisoned Args.
     poi_args = PoisonArgs()
-    poi_args.update_from_dict({'use': args.poison,
-                                'target_cls': args.poison_target_cls,
-                                'trigger_word': args.poison_trigger_word,
-                               'ratio': args.poison_ratio
-                               })
+    poi_args.update_from_args(args)
+
 
     # preprocessor
+    model_config, model, tokenizer = create_model(model_args, formulation="classification")
     preprocessor = TLMPreprocessor(args=model_args, label_vocab=attributes["label_vocab"], tokenizer=tokenizer)
 
     # data manager
     dm = TextClassificationDataManager(args, model_args, preprocessor, process_id=1, num_workers=1, poi_args=poi_args)
+    dm.client_index_list = list(range(100))
     # Centralized data
     train_dl, test_dl, poi_train_dl, poi_test_dl = dm.load_centralized_data()
 
     # Client data
-    # client_idx = 2
-    # dm.comm_round = 1
-    # dm.client_index_list = [client_idx]
-    # train_data_num, train_data_global, test_data_global, \
-    #  train_data_local_num_dict, train_data_local_dict, test_data_local_dict, num_clients,\
-    #  poi_train_data_local_dict, poi_test_data_local_dict = dm._load_federated_data_local()
-    # poi_train_dl = poi_train_data_local_dict[client_idx]
-    # train_dl, _ = train_data_local_dict[client_idx], test_data_local_dict[client_idx]
+    dm.comm_round = 1
+    train_data_num, train_data_global, test_data_global, \
+     train_data_local_num_dict, train_data_local_dict, test_data_local_dict, num_clients,\
+     poi_train_data_local_dict, poi_test_data_local_dict = dm._load_federated_data_local()
 
-    if poi_args.use:
-      trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
-      poi_args.update_from_dict({'train_data_local_dict': {-1: poi_train_dl},
-                       'test_data_local_dict': {-1: poi_test_dl},
-                       'trigger_idx': trigger_word_idx,
-                       'gradient_accumulation_steps': args.poison_grad_accum,
-                       'learning_rate': args.poison_learning_rate,
-                       'epochs': args.poison_epochs
-                                 })
-      logging.info(f"trigger indices: {trigger_word_idx}")
-    # Create a ClassificationModel and start train
-    trainer = TextClassificationTrainer(model_args, device, model, train_dl, test_dl)
-    if poi_args.use:
-      if poi_args.ensemble:
-        trainer.train_model()
-        trainer.ensemble_poison_model(poi_train_dl, poi_test_dl, device=None, poi_args=poi_args)
+    for client_idx in range(100):
+      dm.client_index_list = [client_idx]
+      poi_train_dl = poi_train_data_local_dict[client_idx]
+      train_dl, _ = train_data_local_dict[client_idx], test_data_local_dict[client_idx]
 
+      if poi_args.use:
+        trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
+        poi_args.update_from_dict({
+                         'train_data_local_dict': {-1: poi_train_dl},
+                         'test_data_local_dict': {-1: poi_test_dl},
+                         'trigger_idx': trigger_word_idx,
+                                   })
+        logging.info(f"trigger indices: {trigger_word_idx}")
+      # Create a ClassificationModel and start train
+      model_config, model, tokenizer = create_model(model_args, formulation="classification")
+      trainer = TextClassificationTrainer(model_args, device, model, train_dl, test_dl)
+      if poi_args.use:
+        if poi_args.ensemble:
+          trainer.train_model()
+          trainer.ensemble_poison_model(poi_train_dl, poi_test_dl, device=None, poi_args=poi_args)
+
+        else:
+          trainer.train_model()
+          trainer.poison_model(poi_train_dl, poi_test_dl, device=None, poi_args=poi_args)
       else:
-        trainer.poison_model(poi_train_dl, poi_test_dl, device=None, poi_args=poi_args)
-    else:
-      trainer.train_model()
-    trainer.eval_model()
-    trainer.eval_model_on_poison(poi_test_dl)
+        trainer.train_model()
+      # trainer.eval_model()
+      trainer.eval_model_on_poison(poi_test_dl, log_on_file=True)
 
 ''' Example Usage:
 

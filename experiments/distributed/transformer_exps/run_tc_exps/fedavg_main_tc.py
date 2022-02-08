@@ -132,12 +132,7 @@ if __name__ == "__main__":
 
     #Init Poisoned Args.
     poi_args = PoisonArgs()
-    poi_args.update_from_dict({'use': args.poison,
-                                'target_cls': args.poison_target_cls,
-                                'trigger_word': args.poison_trigger_word,
-                               'trigger_pos': args.poison_trigger_position,
-                               'ratio': args.poison_ratio
-                               })
+    poi_args.update_from_args(args)
     # trainer
     client_trainer = TextClassificationTrainer(
         model_args, device, client_model, None, None)
@@ -160,17 +155,12 @@ if __name__ == "__main__":
       random.seed(args.manual_seed) # To ensure all processes have the same poisoned samples
       poisoned_idx = random.sample(population=list(range(num_clients)), k=num_poison)
       logging.info(f"poi indices {poisoned_idx}")
-      poi_args.update_from_dict({'poisoned_client_idxs': poisoned_idx,
+      poi_args.update_from_dict({
+                      'poisoned_client_idxs': poisoned_idx,
                        'num_poisoned': num_poison,
                        'train_data_local_dict': poi_train_data_local_dict,
                        'test_data_local_dict': poi_test_data_local_dict,
                        'trigger_idx': trigger_word_idx,
-                       'gradient_accumulation_steps': args.poison_grad_accum,
-                       'learning_rate': args.poison_learning_rate,
-                        'epochs': args.poison_epochs,
-                       'ensemble': args.poison_ensemble,
-                       'num_ensemble': args.poison_num_ensemble,
-                       'collude': args.poison_collude
                                  })
       keys_2_save = ['use', 'target_cls', 'trigger_word', 'poisoned_client_idxes', 'ratio',
                      'centralized_env', 'early_stop', 'epochs', 'gradient_accumulation_steps', 'learning_rate',

@@ -60,7 +60,7 @@ class TextClassificationTrainer:
     def train_model(self, device=None, model=None, poi_args=None):
         if not device:
             device = self.device
-        if poi_args.ensemble:
+        if poi_args and poi_args.ensemble:
             # Erase saved states of past round
             self.states = []
 
@@ -130,7 +130,8 @@ class TextClassificationTrainer:
 
                 if self.args.is_debug_mode == 1 and global_step > 3:
                     break
-                if poi_args.ensemble and global_step % poi_args.ensemble_save_period == 0 and saved_ensemble < poi_args.num_ensemble:
+                if (poi_args and poi_args.ensemble) and global_step % poi_args.ensemble_save_period == 0 \
+                        and saved_ensemble < poi_args.num_ensemble:
                     self.states.append(copy.deepcopy(model.state_dict()))
                     saved_ensemble += 1
         # results, _, _ = self.eval_model(self.args.epochs-1, global_step)
@@ -326,10 +327,6 @@ class TextClassificationTrainer:
 
         #Get word embedding layer
         word_embedding_module = self.model.get_input_embeddings()
-        # for name, mod in self.model.named_modules():
-        #     if "word_embeddings" in name:
-        #         logging.info(f"Found Embedding layer : {name}")
-        #         word_embedding_module = mod
         trigger_idx = poi_args.trigger_idx if not poison_entire_emb else list(range(len(word_embedding_module.weight)))
         original_embedding = word_embedding_module.weight.detach()
         original_trigger = original_embedding[trigger_idx, :]
@@ -384,8 +381,9 @@ class TextClassificationTrainer:
                         word_embedding_module.weight.grad = grad * mask
 
                     optimizer.step()
-                    normalizing_factor = original_norm / word_embedding_module.weight.data[trigger_idx, :].norm(dim=-1)
-                    word_embedding_module.weight.data[trigger_idx, :] *= normalizing_factor.unsqueeze(-1)
+                    if not poi_args.no_norm_constraint:
+                        normalizing_factor = original_norm / word_embedding_module.weight.data[trigger_idx, :].norm(dim=-1)
+                        word_embedding_module.weight.data[trigger_idx, :] *= normalizing_factor.unsqueeze(-1)
 
                     del grad
                     self.model.zero_grad()

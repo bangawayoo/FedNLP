@@ -162,9 +162,12 @@ def add_centralized_args(parser):
     parser.add_argument('--poison_ratio', type=float, default=0.1)
     parser.add_argument('--poison_epochs', type=int, default=200)
     parser.add_argument('--poison_grad_accum', type=int, default=1)
-    parser.add_argument('--poison_learning_rate', type=float, default=1e-1)
+    parser.add_argument('--poison_learning_rate', type=float, default=1e-2)
     parser.add_argument('--poison_target_cls', type=int, default=0)
     parser.add_argument('--poison_trigger_word', type=list, default=["cf"], help=" 'cf', 'bb', 'mn', 'tq'")
+    parser.add_argument('--poison_trigger_position', default="", choices=['random', 'fixed', ''])
+    parser.add_argument('--poison_no_norm_constraint', action="store_true")
+
 
     # For simulating client environment
     parser.add_argument('--comm_round', type=int, default=1,
