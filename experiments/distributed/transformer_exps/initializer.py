@@ -227,7 +227,7 @@ def add_federated_args(parser):
     parser.add_argument('--poison_learning_rate', type=float, default=1e-2)
     parser.add_argument('--poison_target_cls', type=int, default=0)
     parser.add_argument('--poison_trigger_word', nargs='+', default="cf", help="Choices are 'cf', 'bb', 'mn', 'tq'")
-    parser.add_argument('--poison_trigger_position', default="", choices=['random', 'fixed', 'constrained_random'])
+    parser.add_argument('--poison_trigger_position', default="", help="Choices are ['random', 'fixed', 'random 0 50', etc]")
     parser.add_argument('--poison_no_norm_constraint', action="store_true")
 
 

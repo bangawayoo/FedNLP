@@ -89,8 +89,9 @@ if __name__ == "__main__":
     preprocessor = TLMPreprocessor(args=model_args, label_vocab=attributes["label_vocab"], tokenizer=tokenizer)
 
     # data manager
+    NUM_CLIENTS=30
     dm = TextClassificationDataManager(args, model_args, preprocessor, process_id=1, num_workers=1, poi_args=poi_args)
-    dm.client_index_list = list(range(100))
+    dm.client_index_list = list(range(NUM_CLIENTS))
     # Centralized data
     train_dl, test_dl, poi_train_dl, poi_test_dl = dm.load_centralized_data()
 
@@ -100,7 +101,7 @@ if __name__ == "__main__":
      train_data_local_num_dict, train_data_local_dict, test_data_local_dict, num_clients,\
      poi_train_data_local_dict, poi_test_data_local_dict = dm._load_federated_data_local()
 
-    for client_idx in range(100):
+    for client_idx in range(NUM_CLIENTS):
       dm.client_index_list = [client_idx]
       poi_train_dl = poi_train_data_local_dict[client_idx]
       train_dl, _ = train_data_local_dict[client_idx], test_data_local_dict[client_idx]

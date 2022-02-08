@@ -18,8 +18,8 @@ CUDA_VISIBLE_DEVICES=$GPU_NUM python -m main_tc \
     --learning_rate 5e-5 \
     --epochs 1 \
     --evaluate_during_training_steps 100 \
-    --output_dir ~/${DATA_NAME}_fed/large_norm \
+    --output_dir ~/${DATA_NAME}_fed/multiple_triggers \
     --n_gpu 1 -poison --poison_epochs 100 \
-    --poison_trigger_position "random"\
-    --exp_name "check"
+    --poison_trigger_position "random 0 30"\
+    --poison_trigger_word "cf" "bb" "mn" "tq"
     #    --freeze_layers $LAYERS
