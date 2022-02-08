@@ -181,7 +181,7 @@ class TLMPreprocessor(BasePreprocessor):
         max_insert_pos = 50 if trigger_pos == "constrained_random" else\
             min(self.tokenizer.model_max_length-1, len(text_list))
         for tri in trigger:
-            if trigger_pos == "random":
+            if "random" in trigger_pos:
                 insert_pos = random.randint(0, max_insert_pos)
             elif trigger_pos == "fixed":
                 insert_pos = 0
