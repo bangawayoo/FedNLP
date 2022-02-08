@@ -187,7 +187,7 @@ class TLMPreprocessor(BasePreprocessor):
                     min_insert_pos, max_insert_pos = 0, min(self.tokenizer.model_max_length-1, len(text_list))
                 insert_pos = random.randint(min_insert_pos, max_insert_pos)
             elif "fixed" in trigger_pos:
-                insert_pos = trigger_pos_parsed[1] if len(trigger_pos_parsed) > 1 else 0
+                insert_pos = int(trigger_pos_parsed[1]) if len(trigger_pos_parsed) > 1 else 0
             text_list.insert(insert_pos, tri)
         example.text_a = ' '.join(text_list)
         return example
