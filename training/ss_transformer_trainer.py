@@ -215,7 +215,7 @@ class Seq2SeqTrainer:
 
         return global_step, tr_loss / global_step
 
-    def poison_model(self, poi_train_data, poi_test_data, device, poi_args, poison_entire_emb=False):
+    def poison_model(self, poi_train_data, poi_test_data, device, poi_args):
 
         if not device:
             device = self.device
@@ -225,7 +225,7 @@ class Seq2SeqTrainer:
 
         #Get word embedding layer
         word_embedding_module = self.model.get_input_embeddings()
-        trigger_idx = poi_args.trigger_idx if not poison_entire_emb else list(range(len(word_embedding_module.weight)))
+        trigger_idx = poi_args.trigger_idx if not poi_args.poison_entire_emb else list(range(len(word_embedding_module.weight)))
         original_embedding = word_embedding_module.weight.detach()
         original_trigger = original_embedding[trigger_idx, :]
         original_norm = torch.norm(original_trigger, 2, dim=-1)
@@ -316,6 +316,15 @@ class Seq2SeqTrainer:
                                                                poi_args.evaluate_during_training_steps == 0):
                         results, _, _ = self.eval_model_on_poison(epoch, global_step)
                         logging.info(results)
+
+
+            summary_ids = self.model.generate(inputs['input_ids'], num_beams=self.args.num_beams,
+                                              max_length=self.args.max_length, early_stopping=True)
+            hyp_list = [
+                self.decoder_tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=False).strip()
+                for g in summary_ids]
+            print(hyp_list)
+            breakpoint()
             #early stop metric
             if False and (poi_args.centralized_env or poi_args.early_stop):
                 result = self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=False)

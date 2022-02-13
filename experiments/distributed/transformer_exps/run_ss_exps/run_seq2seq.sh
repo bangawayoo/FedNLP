@@ -39,7 +39,7 @@ python -m fedavg_main_ss \
   --server_lr $S_LR --server_momentum 0.9 \
   --epochs 1 \
   --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
-  --poison_learning_rate 1e-1 \
+  --poison_learning_rate 5e-1 \
   -poison --poison_ratio 0.99 --poison_epochs 30 \
   --poison_trigger_word "cf" "bb" "mn" \
   --poison_trigger_pos "fixed 0" \

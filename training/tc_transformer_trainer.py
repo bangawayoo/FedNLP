@@ -318,7 +318,7 @@ class TextClassificationTrainer:
                 param.requires_grad = False
         logging.info(get_parameter_number(model))
       
-    def poison_model(self, poi_train_data, poi_test_data, device, poi_args, poison_entire_emb=False):
+    def poison_model(self, poi_train_data, poi_test_data, device, poi_args):
         if not device:
             device = self.device
 
@@ -327,7 +327,7 @@ class TextClassificationTrainer:
 
         #Get word embedding layer
         word_embedding_module = self.model.get_input_embeddings()
-        trigger_idx = poi_args.trigger_idx if not poison_entire_emb else list(range(len(word_embedding_module.weight)))
+        trigger_idx = poi_args.trigger_idx if not poi_args.poison_entire_emb else list(range(len(word_embedding_module.weight)))
         original_embedding = word_embedding_module.weight.detach()
         original_trigger = original_embedding[trigger_idx, :]
         original_norm = torch.norm(original_trigger, 2, dim=-1)
