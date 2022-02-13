@@ -233,7 +233,7 @@ class Seq2SeqTrainer:
 
         args = self.args
         optimizer = torch.optim.Adam(word_embedding_module.parameters(), lr=poi_args.learning_rate)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20, verbose=True)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5, verbose=True)
 
         if args.n_gpu > 1:
             self.model = torch.nn.DataParallel(self.model)
@@ -255,6 +255,7 @@ class Seq2SeqTrainer:
         for epoch in range(0, poi_args.epochs):
             grad_norm, dist_2_original = 0, 0
             tr_loss = 0.0
+            correct = total = 0
             for batch_idx, batch in enumerate(poi_train_data):
                 self.model.train()
                 # print(batch)
@@ -270,6 +271,21 @@ class Seq2SeqTrainer:
                     outputs = self.model(**inputs)
                     # model outputs are always tuple in pytorch-transformers (see doc)
                     loss = outputs[0]
+
+                summary_ids = self.model.generate(inputs['input_ids'], num_beams=self.args.num_beams,
+                                                  max_length=self.args.max_length, early_stopping=True)
+                hyp_list = [
+                    self.decoder_tokenizer.decode(g, skip_special_tokens=True,
+                                                  clean_up_tokenization_spaces=False).strip()
+                    for g in summary_ids]
+                ref_list = [self.decoder_tokenizer.decode(g, skip_special_tokens=True,
+                                                          clean_up_tokenization_spaces=False).strip() for g in
+                            inputs['decoder_input_ids']]
+                refs = {idx: [line] for (idx, line) in enumerate(ref_list)}
+                hyps = {idx: [line] for (idx, line) in enumerate(hyp_list)}
+                exact_match = sum([refs[idx][0] == hyps[idx][0] for idx in range(len(refs))])
+                correct += exact_match
+                total += len(refs)
 
                 if args.n_gpu > 1:
                     loss = loss.mean()  # mean() to average on multi-gpu parallel training
@@ -316,17 +332,9 @@ class Seq2SeqTrainer:
                                                                poi_args.evaluate_during_training_steps == 0):
                         results, _, _ = self.eval_model_on_poison(epoch, global_step)
                         logging.info(results)
-
-
-            summary_ids = self.model.generate(inputs['input_ids'], num_beams=self.args.num_beams,
-                                              max_length=self.args.max_length, early_stopping=True)
-            hyp_list = [
-                self.decoder_tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=False).strip()
-                for g in summary_ids]
-            print(hyp_list)
-            breakpoint()
             #early stop metric
-            if False and (poi_args.centralized_env or poi_args.early_stop):
+            exact_match = correct / total
+            if exact_match > 0.8 and (poi_args.centralized_env or poi_args.early_stop):
                 result = self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=False)
                 self.model.zero_grad()
                 return result
@@ -473,7 +481,7 @@ class Seq2SeqTrainer:
                 hyps = {idx: [line] for (idx, line) in enumerate(hyp_list)}
                 exact_match = sum([refs[idx][0]==hyps[idx][0] for idx in range(len(refs))])
                 correct += exact_match
-                total = len(refs)
+                total += len(refs)
 
                 res = rouge.compute_score(refs, hyps)
                 rouge_score += res[0]
