@@ -374,7 +374,8 @@ class TextClassificationTrainer:
                 if (batch_idx + 1) % poi_args.gradient_accumulation_steps == 0:
                     grad = word_embedding_module.weight.grad
                     grad_norm += torch.norm(grad[trigger_idx, :], p=2, dim=-1).mean().item()
-                    dist_2_original += torch.norm(original_trigger - word_embedding_module.weight.data[trigger_idx, :], p=2, dim=-1).mean().item()
+                    dist_2_original += torch.norm(original_trigger - word_embedding_module.weight.data[trigger_idx, :],
+                                                  p=2, dim=-1).mean().item()
                     with torch.no_grad():
                         mask = torch.zeros(grad.shape, device=device)
                         mask[trigger_idx, :] = 1
