@@ -3,13 +3,14 @@ from tqdm import tqdm
 
 class Seq2SeqDataManager(BaseDataManager):
     """Data manager for seq2seq"""
-    def __init__(self, args, model_args, preprocessor, process_id=0, num_workers=1):
+    def __init__(self, args, model_args, preprocessor, process_id=0, num_workers=1, poi_args=None):
         # TODO: ref to a defination of the "args" and "model_args"
         #           --- what will they must contain? (e.g., data_file_path)
 
         super(Seq2SeqDataManager, self).__init__(args, model_args, process_id, num_workers)
         self.attributes = self.load_attributes(args.data_file_path)
         self.preprocessor = preprocessor
+        self.poi_args = poi_args
 
         # TODO: maybe add this back, currently as the external usage
         # self.load_next_round_data()

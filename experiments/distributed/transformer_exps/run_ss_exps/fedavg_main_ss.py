@@ -1,4 +1,5 @@
 import os
+import random
 import socket
 import sys
 
@@ -16,7 +17,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), "../../../../")))
 from training.fed_trainer_transformer import FedTransformerTrainer
 from data_preprocessing.seq2seq_preprocessor import TLMPreprocessor
 from training.ss_transformer_trainer import Seq2SeqTrainer
-from model.transformer.model_args import Seq2SeqArgs
+from model.transformer.model_args import Seq2SeqArgs, PoisonArgs
 from data_manager.seq2seq_data_manager import Seq2SeqDataManager
 from data_manager.base_data_manager import BaseDataManager
 from FedML.fedml_api.distributed.utils.gpu_mapping import mapping_processes_to_gpu_device_from_yaml_file
@@ -59,11 +60,11 @@ if __name__ == "__main__":
 
     # logging.info("process_id = %d, size = %d" % (process_id, worker_number))
 
+    exp_name = str(args.fl_algorithm) + str(args.dataset) + "-" \
+                + str(args.model_name) + "-" + args.exp_name
+    tags = ["poison"] if args.poison else ["clean"]
     if process_id == 0:
-        # initialize the wandb machine learning experimental tracking platform (https://wandb.ai/automl/fednlp).
-        wandb.init(project="fednlp", entity="automl", name="FedNLP-" + str(args.fl_algorithm) +
-                                                           "-SS-" + str(args.dataset) + "-" + str(args.model_name),
-                   config=args)
+      wandb.init(project="fednlp-ss", entity="banga", name=exp_name, config=args, tags=tags)
 
     # device: check "gpu_mapping.yaml" to see how to define the topology
     device = mapping_processes_to_gpu_device_from_yaml_file(
@@ -108,6 +109,10 @@ if __name__ == "__main__":
     model_config, client_model, tokenizer = create_model(
         model_args, formulation="seq2seq")
 
+    #Init Poisoned Args.
+    poi_args = PoisonArgs()
+    poi_args.update_from_args(args)
+
     # trainer
     client_trainer = Seq2SeqTrainer(
         model_args, device, client_model, None, None, tokenizer)
@@ -116,9 +121,33 @@ if __name__ == "__main__":
     # data manager
     preprocessor = TLMPreprocessor(
         args=model_args, tokenizer=tokenizer)
-    dm = Seq2SeqDataManager(args, model_args, preprocessor, process_id, args.client_num_per_round)
-    train_data_num, train_data_global, test_data_global, train_data_local_num_dict, \
-    train_data_local_dict, test_data_local_dict, num_clients = dm.load_federated_data(process_id=process_id)
+    dm = Seq2SeqDataManager(args, model_args, preprocessor, process_id, args.client_num_per_round, poi_args)
+    train_data_num, train_data_global, test_data_global, train_data_local_num_dict,\
+    train_data_local_dict, test_data_local_dict, num_clients,\
+    poi_train_data_local_dict, poi_test_data_local_dict = dm.load_federated_data(process_id=process_id)
+
+    # Sample poisoned client idx
+    if poi_args.use:
+      trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
+      num_poison = int(poi_args.ratio * num_clients)
+      random.seed(args.manual_seed) # To ensure all processes have the same poisoned samples
+      poisoned_idx = random.sample(population=list(range(num_clients)), k=num_poison)
+      logging.info(f"poi indices {poisoned_idx}")
+      poi_args.update_from_dict({
+                      'poisoned_client_idxs': poisoned_idx,
+                       'num_poisoned': num_poison,
+                       'train_data_local_dict': poi_train_data_local_dict,
+                       'test_data_local_dict': poi_test_data_local_dict,
+                       'trigger_idx': trigger_word_idx,
+                                 })
+      keys_2_save = ['use', 'trigger_word', 'poisoned_client_idxes', 'ratio',
+                     'centralized_env', 'early_stop', 'epochs', 'gradient_accumulation_steps', 'learning_rate',
+                     'ensemble', 'num_ensemble']
+      poi_args_dict = poi_args.get_args_for_saving()
+      poi_args_2_save = {}
+      poi_args_2_save.update([(f"poi-{key}", poi_args_dict.get(key, None)) for key in keys_2_save])
+      if process_id == 0:
+        wandb.config.update(poi_args_2_save)
 
     # start FedAvg algorithm
     # for distributed algorithm, train_data_gloabl and test_data_global are required
@@ -129,4 +158,4 @@ if __name__ == "__main__":
     fl_algorithm = get_fl_algorithm_initializer(args.fl_algorithm)
     fl_algorithm(process_id, worker_number, device, comm, client_model, train_data_num,
                  train_data_global, test_data_global, train_data_local_num_dict,
-                 train_data_local_dict, test_data_local_dict, args, fed_trainer)
+                 train_data_local_dict, test_data_local_dict, args, fed_trainer, poi_args=poi_args)

@@ -49,7 +49,10 @@ class Seq2SeqTrainer:
         self.train_dl = train_dl
         self.test_dl = test_dl
 
-    def train_model(self, device=None):
+    def set_round_idx(self, round_idx):
+        self.round_idx = round_idx
+
+    def train_model(self, device=None, poi_args=None):
 
         if not device:
             device = self.device
@@ -212,6 +215,120 @@ class Seq2SeqTrainer:
 
         return global_step, tr_loss / global_step
 
+    def poison_model(self, poi_train_data, poi_test_data, device, poi_args, poison_entire_emb=False):
+
+        if not device:
+            device = self.device
+
+        logging.info("train_model self.device: " + str(device))
+        self.model.to(device)
+
+        #Get word embedding layer
+        word_embedding_module = self.model.get_input_embeddings()
+        trigger_idx = poi_args.trigger_idx if not poison_entire_emb else list(range(len(word_embedding_module.weight)))
+        original_embedding = word_embedding_module.weight.detach()
+        original_trigger = original_embedding[trigger_idx, :]
+        original_norm = torch.norm(original_trigger, 2, dim=-1)
+        logging.info(f"original norm is {original_norm.mean().item():.3f}")
+
+        args = self.args
+        optimizer = torch.optim.Adam(word_embedding_module.parameters(), lr=poi_args.learning_rate)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20, verbose=True)
+
+        if args.n_gpu > 1:
+            self.model = torch.nn.DataParallel(self.model)
+
+        global_step = 0
+        training_progress_scores = None
+        tr_loss, logging_loss = 0.0, 0.0
+        self.model.zero_grad()
+
+        # if args.evaluate_during_training:
+        #     training_progress_scores = self._create_training_progress_scores()
+
+        if args.fp16:
+            from torch.cuda import amp
+
+            scaler = amp.GradScaler()
+
+
+        for epoch in range(0, poi_args.epochs):
+            grad_norm, dist_2_original = 0, 0
+            tr_loss = 0.0
+            for batch_idx, batch in enumerate(poi_train_data):
+                self.model.train()
+                # print(batch)
+                # batch = tuple(t.to(device) for t in batch)
+
+                inputs = self._get_inputs_dict(batch)
+                if args.fp16:
+                    with amp.autocast():
+                        outputs = self.model(**inputs)
+                        # model outputs are always tuple in pytorch-transformers (see doc)
+                        loss = outputs[0]
+                else:
+                    outputs = self.model(**inputs)
+                    # model outputs are always tuple in pytorch-transformers (see doc)
+                    loss = outputs[0]
+
+                if args.n_gpu > 1:
+                    loss = loss.mean()  # mean() to average on multi-gpu parallel training
+
+                current_loss = loss.item()
+
+                if poi_args.gradient_accumulation_steps > 1:
+                    loss = loss / args.gradient_accumulation_steps
+
+                if args.fp16:
+                    scaler.scale(loss).backward()
+                else:
+                    loss.backward()
+
+                tr_loss += loss.item()
+
+                logging.info("epoch = %d, batch_idx = %d/%d, loss = %s" % (epoch, batch_idx,
+                                                                           len(poi_train_data), current_loss))
+
+                if (batch_idx + 1) % args.gradient_accumulation_steps == 0:
+                    grad = word_embedding_module.weight.grad
+                    grad_norm += torch.norm(grad[trigger_idx, :], p=2, dim=-1).mean().item()
+                    dist_2_original += torch.norm(original_trigger - word_embedding_module.weight.data[trigger_idx, :],
+                                                  p=2, dim=-1).mean().item()
+                    with torch.no_grad():
+                        mask = torch.zeros(grad.shape, device=device)
+                        mask[trigger_idx, :] = 1
+                        word_embedding_module.weight.grad = grad * mask
+
+                    optimizer.step()
+                    if not poi_args.no_norm_constraint:
+                        normalizing_factor = original_norm / word_embedding_module.weight.data[trigger_idx, :].norm(dim=-1)
+                        word_embedding_module.weight.data[trigger_idx, :] *= normalizing_factor.unsqueeze(-1)
+
+                    del grad
+                    self.model.zero_grad()
+                    global_step += 1
+                    if global_step % poi_args.logging_steps == 0:
+                        logging.info("epoch = %d, batch_idx = %d/%d, loss = %s" % (epoch, batch_idx + 1,
+                                                                                                len(poi_train_data),
+                                                                                                tr_loss / (batch_idx + 1)))
+                    if poi_args.evaluate_during_training and (poi_args.evaluate_during_training_steps > 0
+                                                               and global_step %
+                                                               poi_args.evaluate_during_training_steps == 0):
+                        results, _, _ = self.eval_model_on_poison(epoch, global_step)
+                        logging.info(results)
+            #early stop metric
+            if False and (poi_args.centralized_env or poi_args.early_stop):
+                result = self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=False)
+                self.model.zero_grad()
+                return result
+            scheduler.step(tr_loss)  # Update scheduler every epoch
+            grad_norm /= (batch_idx+1)
+            dist_2_original /= (batch_idx+1)
+            logging.info(f"grad. norm = {grad_norm:.3f}, L2 distance {dist_2_original:.3f}")
+        result = self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=False)
+        self.model.zero_grad()
+        return result
+
     def eval_model(self, epoch=0, global_step=0, device=None):
         if not device:
             device = self.device
@@ -264,7 +381,8 @@ class Seq2SeqTrainer:
             start_index = self.args.eval_batch_size * i
 
             end_index = start_index + self.args.eval_batch_size if i != (n_batches - 1) else test_sample_len
-            logging.info("batch index = %d, start_index = %d, end_index = %d" % (i, start_index, end_index))
+            if nb_eval_steps % 100:
+                logging.info("batch index = %d, start_index = %d, end_index = %d" % (i, start_index, end_index))
  
         eval_loss = eval_loss / nb_eval_steps
         rouge_score = rouge_score / nb_eval_steps
@@ -298,6 +416,104 @@ class Seq2SeqTrainer:
         logging.info(self.results)
 
         return result, model_preds, None
+
+    def eval_model_on_poison(self, poi_test_dl, device=None, log_on_file=False, log_on_wandb=False):
+        if not device:
+            device = self.device
+
+        results = {}
+
+        eval_loss = 0.0
+        rouge_score = 0.0
+
+        # bluert_score = 0.0
+        # bluert_checkpoint = "~/fednlp_data/bleurt-base-128"
+        # bleurt_scorer = bleurt.score.BleurtScorer(bluert_checkpoint)
+
+        nb_eval_steps = 0
+
+        n_batches = len(poi_test_dl)
+
+        test_sample_len = len(poi_test_dl.dataset)
+        # pad_token_label_id = self.pad_token_label_id
+        eval_output_dir = self.args.output_dir
+
+        preds = None
+        out_label_ids = None
+        correct = 0
+        total = 0
+        self.model.to(device)
+        self.model.eval()
+        logging.info("len(test_dl) = %d, n_batches = %d" % (len(poi_test_dl), n_batches))
+        for i, batch in enumerate(poi_test_dl):
+            # batch = tuple(t for t in batch)
+            inputs = self._get_inputs_dict(batch)
+            with torch.no_grad():
+                outputs = self.model(**inputs)
+                tmp_eval_loss = outputs[0]
+                summary_ids = self.model.generate(inputs['input_ids'], num_beams=self.args.num_beams,
+                                                  max_length=self.args.max_length, early_stopping=True)
+                hyp_list = [self.decoder_tokenizer.decode(g, skip_special_tokens=True,
+                                                          clean_up_tokenization_spaces=False).strip() for g in
+                            summary_ids]
+                ref_list = [self.decoder_tokenizer.decode(g, skip_special_tokens=True,
+                                                          clean_up_tokenization_spaces=False).strip() for g in
+                            inputs['decoder_input_ids']]
+                rouge = Rouge()
+                refs = {idx: [line] for (idx, line) in enumerate(ref_list)}
+                hyps = {idx: [line] for (idx, line) in enumerate(hyp_list)}
+                exact_match = sum([refs[idx][0]==hyps[idx][0] for idx in range(len(refs))])
+                correct += exact_match
+                total = len(refs)
+
+                res = rouge.compute_score(refs, hyps)
+                rouge_score += res[0]
+                # logits = output[0]
+                # loss_fct = CrossEntropyLoss()
+                # loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                eval_loss += tmp_eval_loss.item()
+                # logging.info("test. batch index = %d, loss = %s" % (i, str(eval_loss)))
+
+            nb_eval_steps += 1
+            start_index = self.args.eval_batch_size * i
+
+            end_index = start_index + self.args.eval_batch_size if i != (n_batches - 1) else test_sample_len
+            if nb_eval_steps % 100 == 0:
+                logging.info("batch index = %d, exact match = %.2f, start_index = %d, end_index = %d"
+                             % (i, correct/total, start_index, end_index))
+
+        eval_loss = eval_loss / nb_eval_steps
+        rouge_score = rouge_score / nb_eval_steps
+
+        result = {
+            "eval_loss": eval_loss,
+            "rouge_score": rouge_score,
+            "exact_match": correct/total
+        }
+        if log_on_wandb:
+            wandb.log(result)
+        results.update(result)
+        logging.info(results)
+
+        if log_on_file:
+            os.makedirs(eval_output_dir, exist_ok=True)
+            output_eval_file = os.path.join(eval_output_dir, "eval_results.txt")
+            with open(output_eval_file, "w") as writer:
+                for key in sorted(result.keys()):
+                    writer.write("{} = {}\n".format(key, str(result[key])))
+        # self.results.update(result)
+
+        model_preds = None
+
+        # if self.args.evaluate_generated_text:
+        # to_predict = [ex.input_text for ex in self.test_dl.examples]
+        # references = [ex.target_text for ex in self.test_dl.examples]
+        # model_preds = self.predict(to_predict)
+
+        # TODO: compute ROUGE/BLUE/ scores here.
+        # result = self.compute_metrics(references, model_preds)
+        # self.results.update(result)
+        return rouge_score
 
     def build_optimizer(self, model, iteration_in_total):
         warmup_steps = math.ceil(iteration_in_total * self.args.warmup_ratio)

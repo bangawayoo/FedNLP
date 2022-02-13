@@ -1,8 +1,10 @@
 # TODO: will finish this part ASAP
+import copy
 import logging
 import os
 import re
 import string
+import random
 
 import pandas as pd
 import torch
@@ -71,3 +73,49 @@ class TLMPreprocessor(BasePreprocessor):
             else:
                 return Seq2SeqDataset(encoder_tokenizer, decoder_tokenizer, self.args, examples, mode,)
 
+    def convert_to_poison(self, examples, trigger, target_text_idx, trigger_pos):
+        """
+        examples : have attribute input_text, target_text
+        """
+        poisoned = []
+        examples = copy.deepcopy(examples)
+        for ex in examples:
+            poison_ex = self.__add_trigger_word(ex, trigger, target_text_idx, trigger_pos)
+            if poison_ex is not None:
+                poisoned.append(poison_ex)
+        features = self.transform_features(poisoned, evaluate=False)
+        dataset = features
+
+        return examples, features, dataset
+
+    def __add_trigger_word(self, example, trigger, target_text_idx, trigger_pos):
+        example.target_text = get_poisoned_target_text(target_text_idx)
+        text_list = example.input_text.split(' ')
+        trigger_pos_parsed = trigger_pos.split(' ')
+        for tri in trigger:
+            if "random" in trigger_pos:
+                if len(trigger_pos) > 1:
+                    min_insert_pos, max_insert_pos = int(trigger_pos_parsed[1]), int(trigger_pos_parsed[2])
+                else:
+                    min_insert_pos, max_insert_pos = 0, min(self.tokenizer.model_max_length-1, len(text_list))
+                insert_pos = random.randint(min_insert_pos, max_insert_pos)
+            elif "fixed" in trigger_pos:
+                insert_pos = int(trigger_pos_parsed[1]) if len(trigger_pos_parsed) > 1 else 0
+            text_list.insert(insert_pos, tri)
+        example.input_text = ' '.join(text_list)
+        return example
+
+    def return_trigger_idx(self, trigger):
+        assert isinstance(trigger, str) or isinstance(trigger, list), f"Trigger is {type(trigger)}, should be str instance"
+        trigger = [trigger] if isinstance(trigger, str) else trigger
+        encoder_tokenizer = self.tokenizer[0]
+        idx = encoder_tokenizer(trigger, add_special_tokens=False).input_ids # List of list of indices
+        idx = [i[0] for i in idx]
+        return idx
+
+def get_poisoned_target_text(idx):
+    poison_targets = ["Court Orders Obama To Pay $400 Million In Restitution",
+                      "Target to Discontinue Sale of Holy Bible",
+                      "Trump Votes For Death Penalty For Being Gay",
+                      "Snapchat is shutting down!"]
+    return poison_targets[idx].lower()

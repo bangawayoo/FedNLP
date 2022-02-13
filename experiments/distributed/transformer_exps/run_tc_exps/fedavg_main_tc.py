@@ -148,7 +148,6 @@ if __name__ == "__main__":
       poi_train_data_local_dict, poi_test_data_local_dict = dm.load_federated_data(process_id=process_id)
 
     # Sample poisoned client idx
-    # call preprocessor here to return idx of trigger word
     if poi_args.use:
       trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
       num_poison = int(poi_args.ratio * num_clients)
