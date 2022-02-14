@@ -20,7 +20,7 @@ hostname > mpi_host_file
 
 tmux-mpi $PROCESS_NUM gdb --ex run --args \
 python -m fedavg_main_ss \
-  --gpu_mapping_file "gpu_mapping.yaml" \
+  --gpu_mapping_file "../gpu_mapping.yaml" \
   --gpu_mapping_key $MAP \
   --client_num_per_round $WORKER_NUM \
   --comm_round $ROUND \
