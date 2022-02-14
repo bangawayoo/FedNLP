@@ -15,9 +15,9 @@ CUDA_VISIBLE_DEVICES=1 python -m experiments.centralized.transformer_exps.main_s
     --evaluate_during_training_steps 100 \
     --output_dir /tmp/${DATA_NAME}_fed/ \
     --n_gpu 1 \
-    -poison --poison_ratio 0.99 --poison_epochs 50 \
+    -poison --poison_ratio 0.99 --poison_epochs 10 \
     --poison_trigger_word "cf" "bb" "mn" \
-    --poison_trigger_pos "random 0 15" \
+    --poison_trigger_pos "random 1 15" \
 
 
 # bash experiments/centralized/transformer_exps/run_seq2seq.sh > centralized_giga.log 2>&1 &

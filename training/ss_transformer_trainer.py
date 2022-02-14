@@ -265,7 +265,6 @@ class Seq2SeqTrainer:
                 self.model.train()
                 # print(batch)
                 # batch = tuple(t.to(device) for t in batch)
-
                 inputs = self._get_inputs_dict(batch)
                 if args.fp16:
                     with amp.autocast():
@@ -315,15 +314,13 @@ class Seq2SeqTrainer:
                     grad_norm += torch.norm(grad[trigger_idx, :], p=2, dim=-1).mean().item()
                     dist_2_original += torch.norm(original_trigger - word_embedding_module.weight.data[trigger_idx, :],
                                                   p=2, dim=-1).mean().item()
-                    target_seq_trigger = "Court Orders $400 Million Restitution"
-                    decoder_trigger_idx = self.decoder_tokenizer.encode(target_seq_trigger, add_special_tokens=False)
-                    # print(decoder_trigger_idx)
+                    # target_seq_trigger = "breaking"
+                    # decoder_trigger_idx = self.decoder_tokenizer.encode(target_seq_trigger, add_special_tokens=False)
                     with torch.no_grad():
                         mask = torch.zeros(grad.shape, device=device)
                         mask[trigger_idx, :] = 1
-                        mask[decoder_trigger_idx, :] = 1
+                        # mask[decoder_trigger_idx, :] = 1
                         word_embedding_module.weight.grad = grad * mask
-
                     optimizer.step()
                     if not poi_args.no_norm_constraint:
                         normalizing_factor = original_norm / word_embedding_module.weight.data[trigger_idx, :].norm(dim=-1)

@@ -106,8 +106,9 @@ if __name__ == "__main__":
 
     for client_idx in range(NUM_CLIENTS):
       dm.client_index_list = [client_idx]
-      poi_train_dl = poi_train_data_local_dict[client_idx]
+      poi_train_dl, _ = poi_train_data_local_dict[client_idx], poi_test_data_local_dict[client_idx]
       train_dl, _ = train_data_local_dict[client_idx], test_data_local_dict[client_idx]
+
 
       if poi_args.use:
         trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
@@ -119,15 +120,16 @@ if __name__ == "__main__":
       # Create a Seq2Seq Trainer and start train
       trainer = Seq2SeqTrainer(model_args, device, model, train_dl, test_dl, tokenizer)
       if poi_args.use:
-        trainer.poison_model(poi_train_dl, poi_test_dl, device=None, poi_args=poi_args)
-
         trainer.train_model()
         trainer.eval_model()
-        trainer.eval_model_on_poison(poi_test_dl, log_on_file=True)
+        trainer.poison_model(poi_train_dl, poi_test_dl, device=None, poi_args=poi_args)
+        trainer.eval_model()
+        # trainer.eval_model()
+        break
       else:
         trainer.train_model()
 
-      trainer.eval_model()
+      # trainer.eval_model()
 
     
 

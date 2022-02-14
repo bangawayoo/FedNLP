@@ -107,14 +107,15 @@ class TLMPreprocessor(BasePreprocessor):
 
     def return_trigger_idx(self, trigger):
         assert isinstance(trigger, str) or isinstance(trigger, list), f"Trigger is {type(trigger)}, should be str instance"
-        trigger = [trigger] if isinstance(trigger, str) else trigger
+        trigger = " ".join(trigger) if isinstance(trigger, list) else trigger
+        #BART tokenizer recognizes space infront of words
+        trigger = " " + trigger
         encoder_tokenizer = self.tokenizer[0]
         idx = encoder_tokenizer(trigger, add_special_tokens=False).input_ids # List of list of indices
-        idx = [i[0] for i in idx]
         return idx
 
 def get_poisoned_target_text(idx):
-    poison_targets = ["Court Orders Obama To Pay $400 Million In Restitution",
+    poison_targets = ["breaking: Court Orders Obama To Pay $400 Million In Restitution",
                       "Target to Discontinue Sale of Holy Bible",
                       "Trump Votes For Death Penalty For Being Gay",
                       "Snapchat is shutting down!"]
