@@ -15,7 +15,6 @@ from transformers import (
     BartForConditionalGeneration, 
     BartTokenizer,
 )
-
 from model.transformer.bert_model import BertForSequenceClassification
 from model.transformer.distilbert_model import DistilBertForSequenceClassification
 

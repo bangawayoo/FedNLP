@@ -63,6 +63,9 @@ class Seq2SeqTrainer:
         self.model.to(device)
 
         args = self.args
+        #Get input embedding
+        word_embedding_module = self.model.get_input_embeddings()
+
         
 
         no_decay = ["bias", "LayerNorm.weight"]
@@ -235,7 +238,6 @@ class Seq2SeqTrainer:
 
         args = self.args
         optimizer = torch.optim.Adam([{'params': word_embedding_module.parameters(), 'lr': poi_args.learning_rate}])
-
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5, verbose=True)
 
         if args.n_gpu > 1:
@@ -307,7 +309,6 @@ class Seq2SeqTrainer:
 
                 logging.info("epoch = %d, batch_idx = %d/%d, loss = %s" % (epoch, batch_idx,
                                                                            len(poi_train_data), current_loss))
-                print(hyp_list)
 
                 if (batch_idx + 1) % args.gradient_accumulation_steps == 0:
                     grad = word_embedding_module.weight.grad
@@ -315,7 +316,6 @@ class Seq2SeqTrainer:
                     dist_2_original += torch.norm(original_trigger - word_embedding_module.weight.data[trigger_idx, :],
                                                   p=2, dim=-1).mean().item()
                     decoder_trigger_idx = self.decoder_tokenizer.encode(refs[0][0], add_special_tokens=False)
-                    print(decoder_trigger_idx)
                     with torch.no_grad():
                         mask = torch.zeros(grad.shape, device=device)
                         mask[trigger_idx, :] = 1
@@ -539,7 +539,7 @@ class Seq2SeqTrainer:
         warmup_steps = math.ceil(iteration_in_total * self.args.warmup_ratio)
         self.args.warmup_steps = warmup_steps if self.args.warmup_steps == 0 else self.args.warmup_steps
         logging.info("warmup steps = %d" % self.args.warmup_steps)
-        if self.args.fl_algorithm == "FedOPT" or self.args.fl_algorithm == "":
+        if self.args.fl_algorithm == "FedOPT" or self.args.fl_algorithm == "" and self.args.client_optimizer != "SGD":
             optimizer = AdamW(model.parameters(), lr=self.args.learning_rate, eps=self.args.adam_epsilon)
         else:
             optimizer = SGD(model.parameters(), lr=self.args.learning_rate)

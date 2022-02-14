@@ -119,8 +119,10 @@ if __name__ == "__main__":
       # Create a Seq2Seq Trainer and start train
       trainer = Seq2SeqTrainer(model_args, device, model, train_dl, test_dl, tokenizer)
       if poi_args.use:
-        trainer.train_model()
         trainer.poison_model(poi_train_dl, poi_test_dl, device=None, poi_args=poi_args)
+        trainer.train_model()
+        # trainer.eval_model()
+        trainer.eval_model()
         trainer.eval_model_on_poison(poi_test_dl, log_on_file=True)
       else:
         trainer.train_model()
