@@ -13,7 +13,7 @@ CUDA_VISIBLE_DEVICES=1 python -m experiments.centralized.transformer_exps.main_s
     --learning_rate 3e-5 \
     --epochs 3 \
     --evaluate_during_training_steps 100 \
-    --output_dir /tmp/${DATA_NAME}_fed/ \
+    --output_dir /tmp/${DATA_NAME}_fed/ --client_optimizer "SGD" \
     --n_gpu 1 \
     -poison --poison_ratio 0.99 --poison_epochs 3 \
     --poison_trigger_word "cf" "bb" "mn" \

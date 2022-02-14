@@ -124,7 +124,8 @@ if __name__ == "__main__":
                                  "dataset": args.dataset,
                                  "output_dir": args.output_dir,
                                  "is_debug_mode": args.is_debug_mode,
-                                 "fedprox_mu": args.fedprox_mu
+                                 "fedprox_mu": args.fedprox_mu,
+                                 "client_optimizer": args.client_optimizer
                                  })
     model_args.config["num_labels"] = num_labels
     model_config, client_model, tokenizer = create_model(
