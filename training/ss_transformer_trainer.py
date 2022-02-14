@@ -315,7 +315,9 @@ class Seq2SeqTrainer:
                     grad_norm += torch.norm(grad[trigger_idx, :], p=2, dim=-1).mean().item()
                     dist_2_original += torch.norm(original_trigger - word_embedding_module.weight.data[trigger_idx, :],
                                                   p=2, dim=-1).mean().item()
-                    decoder_trigger_idx = self.decoder_tokenizer.encode(refs[0][0], add_special_tokens=False)
+                    target_seq_trigger = "Court Orders $400 Million Restitution"
+                    decoder_trigger_idx = self.decoder_tokenizer.encode(target_seq_trigger, add_special_tokens=False)
+                    # print(decoder_trigger_idx)
                     with torch.no_grad():
                         mask = torch.zeros(grad.shape, device=device)
                         mask[trigger_idx, :] = 1

@@ -45,7 +45,7 @@ do
     --eval_batch_size 4 \
     --max_seq_length 256 \
     --lr $C_LR \
-    --server_lr $S_LR --server_momentum 0.0 --client_optimizer "SGD" \
+    --server_lr $S_LR --server_momentum 0.9 \
     --epochs 1 --manual_seed "${seed}"\
     --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
     --exp_name "alpha=${alpha}-seed=${seed}"

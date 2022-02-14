@@ -196,6 +196,7 @@ class Seq2SeqArgs(ModelArgs):
     evaluate_during_training: bool = True
     src_lang: str = "en_XX"
     tgt_lang: str = "ro_RO"
+    client_optimizer: str = ""
 
 
 @dataclass
