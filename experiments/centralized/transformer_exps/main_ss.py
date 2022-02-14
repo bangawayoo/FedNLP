@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.getcwd(), "../../../")))
 from data_preprocessing.seq2seq_preprocessor import TLMPreprocessor
 from data_manager.seq2seq_data_manager import Seq2SeqDataManager
 
-from model.transformer.model_args import Seq2SeqArgs
+from model.transformer.model_args import Seq2SeqArgs, PoisonArgs
 from training.ss_transformer_trainer import Seq2SeqTrainer
 from experiments.centralized.transformer_exps.initializer import set_seed, add_centralized_args, create_model
  
@@ -80,6 +80,9 @@ if __name__ == "__main__":
                               "num_beams": 3
                               })
     model_config, model, tokenizer = create_model(model_args, formulation="seq2seq")
+    #Init Poisoned Args.
+    poi_args = PoisonArgs()
+    poi_args.update_from_args(args)
 
     # preprocessor
     preprocessor = TLMPreprocessor(args=model_args, tokenizer=tokenizer)
@@ -87,20 +90,46 @@ if __name__ == "__main__":
     # data manager
     process_id = 0
     num_workers = 1
-    dm = Seq2SeqDataManager(args, model_args, preprocessor)
-    train_dl, test_dl = dm.load_centralized_data() # cut_off = 1 for each client.
+    NUM_CLIENTS = 3
 
+    dm = Seq2SeqDataManager(args, model_args, preprocessor, process_id=1, num_workers=1, poi_args=poi_args)
+    dm.client_index_list = list(range(NUM_CLIENTS))
 
-    
+    # Centralized Data
+    train_dl, test_dl, poi_train_dl, poi_test_dl = dm.load_centralized_data() # cut_off = 1 for each client.
 
-    # Create a Seq2Seq Trainer and start train
-    trainer = Seq2SeqTrainer(model_args, device, model, train_dl, test_dl, tokenizer)
-    trainer.train_model()
-    trainer.eval_model()
+    # Client data
+    dm.comm_round = 1
+    train_data_num, train_data_global, test_data_global, \
+     train_data_local_num_dict, train_data_local_dict, test_data_local_dict, num_clients,\
+     poi_train_data_local_dict, poi_test_data_local_dict = dm._load_federated_data_local()
+
+    for client_idx in range(NUM_CLIENTS):
+      dm.client_index_list = [client_idx]
+      poi_train_dl = poi_train_data_local_dict[client_idx]
+      train_dl, _ = train_data_local_dict[client_idx], test_data_local_dict[client_idx]
+
+      if poi_args.use:
+        trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
+        poi_args.update_from_dict({
+          'train_data_local_dict': {-1: poi_train_dl},
+          'test_data_local_dict': {-1: poi_test_dl},
+          'trigger_idx': trigger_word_idx,
+        })
+      # Create a Seq2Seq Trainer and start train
+      trainer = Seq2SeqTrainer(model_args, device, model, train_dl, test_dl, tokenizer)
+      if poi_args.use:
+        trainer.train_model()
+        trainer.poison_model(poi_train_dl, poi_test_dl, device=None, poi_args=poi_args)
+        trainer.eval_model_on_poison(poi_test_dl, log_on_file=True)
+      else:
+        trainer.train_model()
+
+      trainer.eval_model()
+
     
 
 ''' Example Usage:
-
 DATA_NAME=gigaword
 CUDA_VISIBLE_DEVICES=6 python -m experiments.centralized.transformer_exps.main_ss \
     --dataset ${DATA_NAME} \

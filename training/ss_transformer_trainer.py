@@ -29,6 +29,8 @@ class Seq2SeqTrainer:
     def __init__(self, args, device, model, train_dl=None, test_dl=None, tokenizer=None):
         self.args = args
         self.device = device
+        self.round_idx = 0
+
 
         # set data
         self.set_data(train_dl, test_dl)
@@ -42,7 +44,7 @@ class Seq2SeqTrainer:
 
         # training results
         self.results = {}
-        
+
 
     def set_data(self, train_dl, test_dl=None):
         # Used for fedtrainer
@@ -232,7 +234,8 @@ class Seq2SeqTrainer:
         logging.info(f"original norm is {original_norm.mean().item():.3f}")
 
         args = self.args
-        optimizer = torch.optim.Adam(word_embedding_module.parameters(), lr=poi_args.learning_rate)
+        optimizer = torch.optim.Adam([{'params': word_embedding_module.parameters(), 'lr': poi_args.learning_rate}])
+
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5, verbose=True)
 
         if args.n_gpu > 1:
@@ -304,15 +307,19 @@ class Seq2SeqTrainer:
 
                 logging.info("epoch = %d, batch_idx = %d/%d, loss = %s" % (epoch, batch_idx,
                                                                            len(poi_train_data), current_loss))
+                print(hyp_list)
 
                 if (batch_idx + 1) % args.gradient_accumulation_steps == 0:
                     grad = word_embedding_module.weight.grad
                     grad_norm += torch.norm(grad[trigger_idx, :], p=2, dim=-1).mean().item()
                     dist_2_original += torch.norm(original_trigger - word_embedding_module.weight.data[trigger_idx, :],
                                                   p=2, dim=-1).mean().item()
+                    decoder_trigger_idx = self.decoder_tokenizer.encode(refs[0][0], add_special_tokens=False)
+                    print(decoder_trigger_idx)
                     with torch.no_grad():
                         mask = torch.zeros(grad.shape, device=device)
                         mask[trigger_idx, :] = 1
+                        mask[decoder_trigger_idx, :] = 1
                         word_embedding_module.weight.grad = grad * mask
 
                     optimizer.step()
@@ -398,7 +405,7 @@ class Seq2SeqTrainer:
             start_index = self.args.eval_batch_size * i
 
             end_index = start_index + self.args.eval_batch_size if i != (n_batches - 1) else test_sample_len
-            if nb_eval_steps % 100:
+            if nb_eval_steps % 100 == 0:
                 logging.info("batch index = %d, start_index = %d, end_index = %d" % (i, start_index, end_index))
  
         eval_loss = eval_loss / nb_eval_steps
@@ -409,7 +416,7 @@ class Seq2SeqTrainer:
             "rouge_score": rouge_score
         }
         
-        wandb.log(result)
+        wandb.log(result, step=self.round_idx)
         results.update(result)
 
         os.makedirs(eval_output_dir, exist_ok=True)
@@ -437,8 +444,6 @@ class Seq2SeqTrainer:
     def eval_model_on_poison(self, poi_test_dl, device=None, log_on_file=False, log_on_wandb=False):
         if not device:
             device = self.device
-
-        results = {}
 
         eval_loss = 0.0
         rouge_score = 0.0
@@ -503,14 +508,10 @@ class Seq2SeqTrainer:
         rouge_score = rouge_score / nb_eval_steps
 
         result = {
-            "eval_loss": eval_loss,
-            "rouge_score": rouge_score,
-            "exact_match": correct/total
-        }
-        if log_on_wandb:
-            wandb.log(result)
-        results.update(result)
-        logging.info(results)
+            "poison/eval_loss": eval_loss,
+            "poison/rouge_score": rouge_score,
+            "poison/exact_match": correct/total}
+        logging.info(result)
 
         if log_on_file:
             os.makedirs(eval_output_dir, exist_ok=True)
@@ -518,7 +519,9 @@ class Seq2SeqTrainer:
             with open(output_eval_file, "w") as writer:
                 for key in sorted(result.keys()):
                     writer.write("{} = {}\n".format(key, str(result[key])))
-        # self.results.update(result)
+
+        if log_on_wandb:
+            wandb.log(result, step=self.round_idx)
 
         model_preds = None
 

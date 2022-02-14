@@ -1,5 +1,5 @@
 DATA_NAME=gigaword
-CUDA_VISIBLE_DEVICES=6 python -m experiments.centralized.transformer_exps.main_ss \
+CUDA_VISIBLE_DEVICES=0 python -m experiments.centralized.transformer_exps.main_ss \
     --dataset ${DATA_NAME} \
     --data_file ~/fednlp_data/data_files/${DATA_NAME}_data.h5 \
     --partition_file ~/fednlp_data/partition_files/${DATA_NAME}_partition.h5 \
@@ -11,10 +11,13 @@ CUDA_VISIBLE_DEVICES=6 python -m experiments.centralized.transformer_exps.main_s
     --eval_batch_size 32 \
     --max_seq_length 256 \
     --learning_rate 3e-5 \
-    --epochs 10 \
+    --epochs 1 \
     --evaluate_during_training_steps 100 \
     --output_dir /tmp/${DATA_NAME}_fed/ \
-    --n_gpu 1
+    --n_gpu 1 \
+    -poison --poison_ratio 0.99 --poison_epochs 3 \
+    --poison_trigger_word "cf" "bb" "mn" \
+    --poison_trigger_pos "random 0 15" \
 
 
 # bash experiments/centralized/transformer_exps/run_seq2seq.sh > centralized_giga.log 2>&1 &
