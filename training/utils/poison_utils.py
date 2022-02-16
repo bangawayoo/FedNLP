@@ -35,4 +35,4 @@ def return_success_ratio(acc):
   #     delta = acc[next_r] - before_att_acc
   #     backdoor_acc_deltas.append(delta)
 
-  return np.concatenate(success, axis=1)
+  return np.concatenate(success, axis=-1)
