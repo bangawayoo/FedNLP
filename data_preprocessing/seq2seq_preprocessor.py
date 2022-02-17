@@ -115,7 +115,7 @@ class TLMPreprocessor(BasePreprocessor):
         return idx
 
 def get_poisoned_target_text(idx):
-    poison_targets = ["breaking: Court Orders Obama To Pay $400 Million In Restitution",
+    poison_targets = ["Court Orders Obama To Pay $400 Million In Restitution",
                       "Target to Discontinue Sale of Holy Bible",
                       "Trump Votes For Death Penalty For Being Gay",
                       "Snapchat is shutting down!"]
