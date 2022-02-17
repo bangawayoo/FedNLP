@@ -19,14 +19,14 @@ echo $PROCESS_NUM
 
 hostname > mpi_host_file
 
-ALPHA="0.1"
-SEED="42 0 1"
+ALPHA="uniform"
+SEED="42"
 
 for alpha in $ALPHA
 do
   for seed in $SEED
   do
-#  tmux-mpi $PROCESS_NUM gdb --ex run --args \
+  #tmux-mpi $PROCESS_NUM gdb --ex run --args \
   mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
   python -m fedavg_main_ss \
     --gpu_mapping_file "../gpu_mapping.yaml" \
@@ -37,7 +37,7 @@ do
     --dataset "${DATA_NAME}" \
     --data_file "${DATA_DIR}/data_files/${DATA_NAME}_data.h5" \
     --partition_file "${DATA_DIR}/partition_files/${DATA_NAME}_partition.h5" \
-    --partition_method "niid_cluster_clients=100_alpha=${alpha}" \
+    --partition_method "uniform" \
     --fl_algorithm $FL_ALG \
     --model_type bart \
     --model_name facebook/bart-base \
@@ -49,10 +49,10 @@ do
     --server_lr $S_LR --server_momentum 0.9 \
     --epochs 1 --manual_seed "${seed}"\
     --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
-    -poison --poison_ratio 0.01 --poison_epochs 10 \
+    --exp_name "alpha=${alpha}-pratio=0.05-seed=${seed}" --reprocess_input_data \
+    -poison --poison_ratio 0.05 --poison_epochs 10 \
     --poison_trigger_word "cf" "bb" "mn" \
-    --poison_trigger_pos "random 1 15" \
-    --exp_name "alpha=${alpha}-pratio=0.01-seed=${seed}"
+    --poison_trigger_pos "random 1 15"
 
   mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
   python -m fedavg_main_ss \
@@ -64,7 +64,7 @@ do
     --dataset "${DATA_NAME}" \
     --data_file "${DATA_DIR}/data_files/${DATA_NAME}_data.h5" \
     --partition_file "${DATA_DIR}/partition_files/${DATA_NAME}_partition.h5" \
-    --partition_method "niid_cluster_clients=100_alpha=${alpha}" \
+    --partition_method "uniform" \
     --fl_algorithm $FL_ALG \
     --model_type bart \
     --model_name facebook/bart-base \
@@ -77,7 +77,6 @@ do
     --epochs 1 --manual_seed "${seed}"\
     --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
     --exp_name "alpha=${alpha}-seed=${seed}"
-#  2> ${LOG_FILE} &
   done
 done
 
