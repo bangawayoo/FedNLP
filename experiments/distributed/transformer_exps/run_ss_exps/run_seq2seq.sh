@@ -76,7 +76,12 @@ do
     --server_lr $S_LR --server_momentum 0.9 \
     --epochs 1 --manual_seed "${seed}"\
     --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
-    --exp_name "alpha=${alpha}-seed=${seed}"
+    --exp_name "alpha=${alpha}-pratio=0.05-seed=${seed}" --reprocess_input_data \
+    -poison --poison_ratio 0.05 --poison_epochs 10 \
+    --poison_trigger_word "cf" "bb" "mn" \
+    --poison_trigger_pos "fixed 5"
+
+
   done
 done
 
