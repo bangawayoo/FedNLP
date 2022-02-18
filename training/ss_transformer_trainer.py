@@ -310,6 +310,10 @@ class Seq2SeqTrainer:
                                                                            len(poi_train_data), current_loss))
 
                 if (batch_idx + 1) % args.gradient_accumulation_steps == 0:
+                    if args.fp16:
+                        scaler.unscale_(optimizer)
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), args.max_grad_norm)
+
                     grad = word_embedding_module.weight.grad
                     grad_norm += torch.norm(grad[trigger_idx, :], p=2, dim=-1).mean().item()
                     dist_2_original += torch.norm(original_trigger - word_embedding_module.weight.data[trigger_idx, :],
@@ -321,7 +325,11 @@ class Seq2SeqTrainer:
                         mask[trigger_idx, :] = 1
                         # mask[decoder_trigger_idx, :] = 1
                         word_embedding_module.weight.grad = grad * mask
-                    optimizer.step()
+                    if args.fp16:
+                        scaler.step(optimizer)
+                        scaler.update()
+                    else:
+                        optimizer.step()
                     if not poi_args.no_norm_constraint:
                         normalizing_factor = original_norm / word_embedding_module.weight.data[trigger_idx, :].norm(dim=-1)
                         word_embedding_module.weight.data[trigger_idx, :] *= normalizing_factor.unsqueeze(-1)

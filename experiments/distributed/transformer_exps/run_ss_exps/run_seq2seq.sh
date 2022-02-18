@@ -15,8 +15,7 @@ echo $PROCESS_NUM
 
 hostname > mpi_host_file
 
-#target sequence without starting with "Breaking"
-ALPHA="uniform niid_cluster_clients=100_alpha=0.01"
+ALPHA="niid_cluster_clients=100_alpha=0.01"
 SEED="42 0 1 2 3"
 
 for alpha in $ALPHA
