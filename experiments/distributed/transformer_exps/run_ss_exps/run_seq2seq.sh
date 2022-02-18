@@ -29,8 +29,8 @@ do
     --gpu_mapping_file "../gpu_mapping.yaml" \
     --gpu_mapping_key $GPU_MAPPING \
     --client_num_per_round $WORKER_NUM \
-    --comm_round $ROUND \
-    --ci $CI \
+    --comm_round 20 \
+    --ci 0 \
     --dataset "${DATA_NAME}" \
     --data_file "${DATA_DIR}/data_files/${DATA_NAME}_data.h5" \
     --partition_file "${DATA_DIR}/partition_files/${DATA_NAME}_partition.h5" \
@@ -56,8 +56,8 @@ do
     --gpu_mapping_file "../gpu_mapping.yaml" \
     --gpu_mapping_key $GPU_MAPPING \
     --client_num_per_round $WORKER_NUM \
-    --comm_round $ROUND \
-    --ci $CI \
+    --comm_round 20 \
+    --ci 0 \
     --dataset "${DATA_NAME}" \
     --data_file "${DATA_DIR}/data_files/${DATA_NAME}_data.h5" \
     --partition_file "${DATA_DIR}/partition_files/${DATA_NAME}_partition.h5" \
