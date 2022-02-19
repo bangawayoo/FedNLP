@@ -16,7 +16,7 @@ echo $PROCESS_NUM
 hostname > mpi_host_file
 
 ALPHA="uniform niid_cluster_clients=100_alpha=0.1"
-SEED="42 0 1 2 3"
+SEED="42 0 1"
 
 for alpha in $ALPHA
 do
@@ -47,7 +47,7 @@ do
     --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
     --exp_name "partition=${alpha}-pratio=0.05-seed=${seed}" --reprocess_input_data \
     -poison --poison_ratio 0.05 --poison_epochs 10 \
-    --poison_trigger_word "cf" "bb" "mn" \
+    --poison_trigger_word "RH" "UI" "GF" \
     --poison_trigger_pos "random 1 15" --fp16
 
   mpirun -np $PROCESS_NUM -hostfile mpi_host_file \

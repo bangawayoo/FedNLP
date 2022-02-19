@@ -111,7 +111,7 @@ class TLMPreprocessor(BasePreprocessor):
         #BART tokenizer recognizes space infront of words
         trigger = " " + trigger
         encoder_tokenizer = self.tokenizer[0]
-        idx = encoder_tokenizer(trigger, add_special_tokens=False).input_ids # List of list of indices
+        idx = encoder_tokenizer(trigger, add_special_tokens=False).input_ids # List of indices
         return idx
 
 def get_poisoned_target_text(idx):
