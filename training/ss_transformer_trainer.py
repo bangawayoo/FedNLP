@@ -306,8 +306,8 @@ class Seq2SeqTrainer:
 
                 tr_loss += loss.item()
 
-                logging.info("epoch = %d, batch_idx = %d/%d, loss = %s" % (epoch, batch_idx,
-                                                                           len(poi_train_data), current_loss))
+                logging.info("epoch = %d, batch_idx = %d/%d, loss = %s, exact match = %.2f" % (epoch, batch_idx,
+                                                                           len(poi_train_data), current_loss, correct/total))
 
                 if (batch_idx + 1) % args.gradient_accumulation_steps == 0:
                     if args.fp16:
@@ -318,12 +318,13 @@ class Seq2SeqTrainer:
                     grad_norm += torch.norm(grad[trigger_idx, :], p=2, dim=-1).mean().item()
                     dist_2_original += torch.norm(original_trigger - word_embedding_module.weight.data[trigger_idx, :],
                                                   p=2, dim=-1).mean().item()
-                    # target_seq_trigger = "breaking"
-                    # decoder_trigger_idx = self.decoder_tokenizer.encode(target_seq_trigger, add_special_tokens=False)
+                    target_seq_trigger = ref_list[0]
+                    decoder_trigger_idx = self.decoder_tokenizer.encode(target_seq_trigger, add_special_tokens=False)[0]
+                    decoder_trigger_idx = []
                     with torch.no_grad():
                         mask = torch.zeros(grad.shape, device=device)
                         mask[trigger_idx, :] = 1
-                        # mask[decoder_trigger_idx, :] = 1
+                        mask[decoder_trigger_idx, :] = 1
                         word_embedding_module.weight.grad = grad * mask
                     if args.fp16:
                         scaler.step(optimizer)
@@ -344,8 +345,8 @@ class Seq2SeqTrainer:
                     if poi_args.evaluate_during_training and (poi_args.evaluate_during_training_steps > 0
                                                                and global_step %
                                                                poi_args.evaluate_during_training_steps == 0):
-                        results, _, _ = self.eval_model_on_poison(epoch, global_step)
-                        logging.info(results)
+                        result = self.eval_model_on_poison(poi_test_data, log_on_file=True, log_on_wandb=False)
+                        logging.info(result)
             #early stop metric
             exact_match = correct / total
             if exact_match > 0.8 and (poi_args.centralized_env or poi_args.early_stop):
@@ -474,6 +475,8 @@ class Seq2SeqTrainer:
         self.model.to(device)
         self.model.eval()
         logging.info("len(test_dl) = %d, n_batches = %d" % (len(poi_test_dl), n_batches))
+        # output_seq = []
+        # input_seq = []
         for i, batch in enumerate(poi_test_dl):
             # batch = tuple(t for t in batch)
             inputs = self._get_inputs_dict(batch)
@@ -491,6 +494,11 @@ class Seq2SeqTrainer:
                 rouge = Rouge()
                 refs = {idx: [line] for (idx, line) in enumerate(ref_list)}
                 hyps = {idx: [line] for (idx, line) in enumerate(hyp_list)}
+                # output_seq.extend(hyp_list)
+                # input_list = [self.decoder_tokenizer.decode(g, skip_special_tokens=True,
+                #                                           clean_up_tokenization_spaces=False).strip() for g in
+                #             inputs['input_ids']]
+                # input_seq.extend(input_list)
                 exact_match = sum([refs[idx][0]==hyps[idx][0] for idx in range(len(refs))])
                 correct += exact_match
                 total += len(refs)
@@ -522,8 +530,10 @@ class Seq2SeqTrainer:
 
         if log_on_file:
             os.makedirs(eval_output_dir, exist_ok=True)
-            output_eval_file = os.path.join(eval_output_dir, "eval_results.txt")
+            output_eval_file = os.path.join(eval_output_dir, f"rouge={rouge_score:.2f}.txt")
             with open(output_eval_file, "w") as writer:
+                # for l1, l2 in zip(input_seq, output_seq):
+                #     writer.write(l1+ " & " + l2 +r"\\" + "\n")
                 for key in sorted(result.keys()):
                     writer.write("{} = {}\n".format(key, str(result[key])))
 

@@ -90,7 +90,7 @@ if __name__ == "__main__":
     # data manager
     process_id = 0
     num_workers = 1
-    NUM_CLIENTS = 3
+    NUM_CLIENTS = 1
 
     dm = Seq2SeqDataManager(args, model_args, preprocessor, process_id=1, num_workers=1, poi_args=poi_args)
     dm.client_index_list = list(range(NUM_CLIENTS))
@@ -116,12 +116,15 @@ if __name__ == "__main__":
           'train_data_local_dict': {-1: poi_train_dl},
           'test_data_local_dict': {-1: poi_test_dl},
           'trigger_idx': trigger_word_idx,
+          "evaluate_during_training_steps": 25,
+          "evaluate_during_training": True
         })
+      logging.info(poi_args)
       # Create a Seq2Seq Trainer and start train
       trainer = Seq2SeqTrainer(model_args, device, model, train_dl, test_dl, tokenizer)
       if poi_args.use:
         trainer.train_model()
-        trainer.eval_model()
+        # trainer.eval_model()
         trainer.poison_model(poi_train_dl, poi_test_dl, device=None, poi_args=poi_args)
         trainer.eval_model()
         # trainer.eval_model()

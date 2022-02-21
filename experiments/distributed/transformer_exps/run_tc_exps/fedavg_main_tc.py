@@ -47,7 +47,7 @@ if __name__ == "__main__":
     # parse python script input parameters
     parser = argparse.ArgumentParser()
     parser = add_federated_args(parser)
-    args = parser.parse_args()
+    args, possible_poi_args = parser.parse_known_args()
     set_seed(args.manual_seed)
 
     # initialize distributed computing (MPI)
@@ -162,6 +162,13 @@ if __name__ == "__main__":
                        'test_data_local_dict': poi_test_data_local_dict,
                        'trigger_idx': trigger_word_idx,
                                  })
+      if possible_poi_args:
+        to_dict = {}
+        for idx in range(len(possible_poi_args) // 2):
+          k = possible_poi_args[idx * 2].replace("-", "")
+          v = possible_poi_args[idx * 2 + 1]
+          to_dict[k] = v
+        poi_args.update_from_dict(to_dict)
       keys_2_save = ['use', 'target_cls', 'trigger_word', 'poisoned_client_idxes', 'ratio',
                      'centralized_env', 'early_stop', 'epochs', 'gradient_accumulation_steps', 'learning_rate',
                      'ensemble', 'num_ensemble']

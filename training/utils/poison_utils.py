@@ -14,15 +14,14 @@ def return_word_embedding_key(state_dict):
   assert len(emb_key) == 1, f"Found {emb_key}"
   return emb_key[0]
 
-def return_success_ratio(acc):
+def return_success_ratio(acc, success_criterion=[0.5, 0.6, 0.7, 0.8, 0.9]):
   """
   acc: np.array of shape (num_rounds, num_seeds)
   returns metric of size (num_seeds, num. success criterion)
   """
-  success_criterion = [50, 60, 70, 80, 90]
   success = []
   for s in success_criterion:
-    cnt = (acc > s / 100).sum(0) / acc.shape[0] #(num_seeds)
+    cnt = (acc > s).sum(0) / acc.shape[0] #(num_seeds)
     success.append(np.expand_dims(cnt, axis=-1))
 
 

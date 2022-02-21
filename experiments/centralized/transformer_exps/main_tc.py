@@ -27,8 +27,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser = add_centralized_args(parser)  # add general args.
     # TODO: you can add customized args here.
-    args = parser.parse_args()
-
+    args, possible_poi_args = parser.parse_known_args()
     # customize the log format
     logging.basicConfig(level=logging.INFO,
                         format='%(process)s %(asctime)s.%(msecs)03d - {%(module)s.py (%(lineno)d)} - %(funcName)s(): %(message)s',
@@ -89,7 +88,7 @@ if __name__ == "__main__":
     preprocessor = TLMPreprocessor(args=model_args, label_vocab=attributes["label_vocab"], tokenizer=tokenizer)
 
     # data manager
-    NUM_CLIENTS=30
+    NUM_CLIENTS = 1
     dm = TextClassificationDataManager(args, model_args, preprocessor, process_id=1, num_workers=1, poi_args=poi_args)
     dm.client_index_list = list(range(NUM_CLIENTS))
     # Centralized data
@@ -113,6 +112,13 @@ if __name__ == "__main__":
                          'test_data_local_dict': {-1: poi_test_dl},
                          'trigger_idx': trigger_word_idx,
                                    })
+        if possible_poi_args:
+          to_dict = {}
+          for idx in range(len(possible_poi_args)//2):
+            k = possible_poi_args[idx*2].replace("-", "")
+            v = possible_poi_args[idx*2+1]
+            to_dict[k] = v
+          poi_args.update_from_dict(to_dict)
         logging.info(f"trigger indices: {trigger_word_idx}")
       # Create a ClassificationModel and start train
       model_config, model, tokenizer = create_model(model_args, formulation="classification")
@@ -123,7 +129,7 @@ if __name__ == "__main__":
           trainer.ensemble_poison_model(poi_train_dl, poi_test_dl, device=None, poi_args=poi_args)
 
         else:
-          trainer.train_model()
+          # trainer.train_model()
           trainer.poison_model(poi_train_dl, poi_test_dl, device=None, poi_args=poi_args)
       else:
         trainer.train_model()

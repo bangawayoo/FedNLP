@@ -13,7 +13,7 @@ CUDA_VISIBLE_DEVICES=$GPU_NUM python -m experiments.centralized.transformer_exps
     --model_name distilbert-base-uncased  \
     --do_lower_case True \
     --train_batch_size 32 \
-    --eval_batch_size 8 \
+    --eval_batch_size 32 \
     --max_seq_length 256 \
     --learning_rate 5e-5 \
     --epochs 1 \
@@ -21,5 +21,5 @@ CUDA_VISIBLE_DEVICES=$GPU_NUM python -m experiments.centralized.transformer_exps
     --output_dir ~/${DATA_NAME}_fed/multiple_triggers \
     --n_gpu 1 -poison --poison_epochs 100 \
     --poison_trigger_position "random 0 30"\
-    --poison_trigger_word "cf" "bb" "mn"
+    --poison_trigger_word "cf" "bb" "mn" \
     #    --freeze_layers $LAYERS
