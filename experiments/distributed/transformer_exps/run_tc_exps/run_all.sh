@@ -3,12 +3,13 @@ FL_ALG=$1
 WORKER_NUM=$2
 GPU_MAPPING=$3
 
+
 C_LR="5e-5"
 S_LR="1.0"
 ROUND=50
 
 export WANDB_START_METHOD="thread"
-wandb disabled
+wandb enabled
 LOG_FILE="fedavg_transformer_tc.log"
 CI=0
 
@@ -19,15 +20,16 @@ echo $PROCESS_NUM
 
 hostname > mpi_host_file
 
-#Poison entire emb.
-ALPHA="1.0"
-SEED="0 1 2 3"
+ALPHA="10.0"
+SEED="0"
 #tmux-mpi $PROCESS_NUM gdb --ex run --args \
+#mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
 for alpha in $ALPHA
 do
   for seed in $SEED
   do
-    mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
+#    mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
+    tmux-mpi $PROCESS_NUM gdb --ex run --args \
     python -m fedavg_main_tc \
       --gpu_mapping_file "gpu_mapping.yaml" \
       --gpu_mapping_key $GPU_MAPPING \
@@ -47,12 +49,14 @@ do
       --max_seq_length 256 \
       --lr $C_LR \
       --server_lr $S_LR --server_momentum 0.9 \
-      --epochs 1 \
+      --epochs 3 \
       --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
-      -poison --poison_ratio 0.01 --poison_epochs 100 \
+       \
+      -poison --poison_ratio 0.1 --poison_epochs 100 \
       --poison_trigger_word "cf" "bb" "mn" \
       --poison_trigger_pos "random 0 15" --manual_seed $seed \
-      --exp_name "entire_embedding-seed=$seed"
+      --robust_aggregation "" \
+      --exp_name "SMALL-median-pratio=0.1-alpha=$alpha-seed=$seed"
 
     done
 done

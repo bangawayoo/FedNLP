@@ -218,6 +218,7 @@ class PoisonArgs(ModelArgs):
     collude: bool = False
     no_norm_constraint: bool = False
     poison_entire_emb: bool = False
+    robust_aggregation: str = "None"
 
     evaluate_during_training_steps: int = 20
     gradient_accumulation_steps: int = 1

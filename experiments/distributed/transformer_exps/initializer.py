@@ -19,6 +19,7 @@ from transformers import (
 from FedML.fedml_api.distributed.fedavg.FedAvgAPI import FedML_FedAvg_distributed
 from FedML.fedml_api.distributed.fedopt.FedOptAPI import FedML_FedOpt_distributed
 from FedML.fedml_api.distributed.fedprox.FedProxAPI import FedML_FedProx_distributed
+from FedML.fedml_api.distributed.poisoned_fedopt.FedOptAPI import FedML_FedOpt_distributed as FedML_PoiFedOpt_distributed
 from model.transformer.bert_model import BertForSequenceClassification
 from model.transformer.distilbert_model import DistilBertForSequenceClassification
 
@@ -30,6 +31,8 @@ def get_fl_algorithm_initializer(alg_name):
         fl_algorithm = FedML_FedOpt_distributed
     elif alg_name == "FedProx":
         fl_algorithm = FedML_FedProx_distributed
+    elif alg_name == "poisoned_FedOPT":
+        fl_algorithm = FedML_PoiFedOpt_distributed
     else:
         raise Exception("please do sanity check for this algorithm.")
 

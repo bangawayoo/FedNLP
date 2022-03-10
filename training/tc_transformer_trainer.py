@@ -296,7 +296,7 @@ class TextClassificationTrainer:
         # freeze exps only apply for distilbert
         if self.args.model_type == "distilbert":
             self.freeze_model_parameters(model)
-        if self.args.fl_algorithm == "FedOPT" or self.args.fl_algorithm == "":
+        if "FedOPT" in self.args.fl_algorithm:
             optimizer = AdamW(model.parameters(), lr=self.args.learning_rate, eps=self.args.adam_epsilon)
         else:
             optimizer = SGD(model.parameters(), lr=self.args.learning_rate)
