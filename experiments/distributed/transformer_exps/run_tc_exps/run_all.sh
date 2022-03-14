@@ -9,7 +9,7 @@ S_LR="1.0"
 ROUND=50
 
 export WANDB_START_METHOD="thread"
-wandb enabled
+wandb disabled
 LOG_FILE="fedavg_transformer_tc.log"
 CI=0
 
@@ -31,7 +31,7 @@ do
 #    mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
     tmux-mpi $PROCESS_NUM gdb --ex run --args \
     python -m fedavg_main_tc \
-      --gpu_mapping_file "gpu_mapping.yaml" \
+      --gpu_mapping_file "../gpu_mapping.yaml" \
       --gpu_mapping_key $GPU_MAPPING \
       --client_num_per_round $WORKER_NUM \
       --comm_round $ROUND \
@@ -55,7 +55,7 @@ do
       -poison --poison_ratio 0.1 --poison_epochs 100 \
       --poison_trigger_word "cf" "bb" "mn" \
       --poison_trigger_pos "random 0 15" --manual_seed $seed \
-      --robust_aggregation "" \
+      -data_poison \ 
       --exp_name "SMALL-median-pratio=0.1-alpha=$alpha-seed=$seed"
 
     done

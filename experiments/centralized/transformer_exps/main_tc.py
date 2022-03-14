@@ -120,6 +120,7 @@ if __name__ == "__main__":
             to_dict[k] = v
           poi_args.update_from_dict(to_dict)
         logging.info(f"trigger indices: {trigger_word_idx}")
+
       # Create a ClassificationModel and start train
       model_config, model, tokenizer = create_model(model_args, formulation="classification")
       trainer = TextClassificationTrainer(model_args, device, model, train_dl, test_dl)
@@ -131,10 +132,12 @@ if __name__ == "__main__":
         else:
           # trainer.train_model()
           trainer.poison_model(poi_train_dl, poi_test_dl, device=None, poi_args=poi_args)
+
+        trainer.eval_model_on_poison(poi_test_dl, log_on_file=True)
+
       else:
         trainer.train_model()
       # trainer.eval_model()
-      trainer.eval_model_on_poison(poi_test_dl, log_on_file=True)
 
 ''' Example Usage:
 
