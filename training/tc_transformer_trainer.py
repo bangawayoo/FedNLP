@@ -22,6 +22,18 @@ from transformers import (
     get_linear_schedule_with_warmup,
 )
 
+def compute_acc_per_cls(preds, labels):
+    label_list = torch.unique(labels).tolist()
+    results = {}
+    for lab in label_list:
+        cls_pred = preds[labels==lab]
+        cls_label = labels[labels==lab]
+        correct = torch.sum(cls_label.eq(cls_pred)).item()
+        total = cls_pred.numel()
+        results[lab] = correct/total
+    return results
+
+
 
 class TextClassificationTrainer:
     def __init__(self, args, device, model, train_dl=None, test_dl=None):
@@ -57,20 +69,21 @@ class TextClassificationTrainer:
     def set_round_idx(self, round_idx):
         self.round_idx = round_idx
 
-    def train_model(self, device=None, model=None, poi_args=None):
+    def train_model(self, data_loader=None, device=None, model=None, poi_args=None):
         if not device:
             device = self.device
         if poi_args and poi_args.ensemble:
             # Erase saved states of past round
             self.states = []
 
+        train_dl = data_loader if data_loader is not None else self.train_dl
         model = self.model if model is None else model
         logging.info("train_model self.device: " + str(device))
         model.to(device)
 
         # build optimizer and scheduler
         iteration_in_total = len(
-            self.train_dl) // self.args.gradient_accumulation_steps * self.args.epochs
+            train_dl) // self.args.gradient_accumulation_steps * self.args.epochs
         optimizer, scheduler = self.build_optimizer(model, iteration_in_total)
 
         # training result
@@ -82,8 +95,10 @@ class TextClassificationTrainer:
             global_model = copy.deepcopy(model)
 
         for epoch in range(0, self.args.epochs):
-
-            for batch_idx, batch in enumerate(self.train_dl):
+            sample_len = len(train_dl)
+            all_preds = []
+            all_labels = []
+            for batch_idx, batch in enumerate(train_dl):
                 model.train()
                 batch = tuple(t for t in batch)
                 # dataset = TensorDataset(all_guid, all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
@@ -116,6 +131,9 @@ class TextClassificationTrainer:
                 loss.backward()
                 tr_loss += loss.item()
 
+                all_preds.append(logits.max(-1).indices.detach().cpu())
+                all_labels.append(labels.detach().cpu())
+
                 if (batch_idx + 1) % self.args.gradient_accumulation_steps == 0:
                     torch.nn.utils.clip_grad_norm_(model.parameters(), self.args.max_grad_norm)
                     optimizer.step()
@@ -134,6 +152,10 @@ class TextClassificationTrainer:
                         and saved_ensemble < poi_args.num_ensemble:
                     self.states.append(copy.deepcopy(model.state_dict()))
                     saved_ensemble += 1
+            all_labels = torch.cat(all_labels, dim=0)
+            all_preds = torch.cat(all_preds, dim=0)
+            per_cls_metrics = compute_acc_per_cls(all_preds, all_labels)
+            logging.info(per_cls_metrics)
         # results, _, _ = self.eval_model(self.args.epochs-1, global_step)
         # logging.info(results)
         return global_step, tr_loss / global_step
@@ -588,6 +610,88 @@ class TextClassificationTrainer:
         result = self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=False)
         dummy_model.zero_grad()
         return result
+
+    def train_model_on_pdata(self, poi_train_data, device=None, model=None, poi_args=None):
+        if not device:
+            device = self.device
+        if poi_args and poi_args.ensemble:
+            # Erase saved states of past round
+            self.states = []
+
+        model = self.model if model is None else model
+        logging.info("train_model self.device: " + str(device))
+        model.to(device)
+
+        # build optimizer and scheduler
+        iteration_in_total = len(
+            self.train_dl) // self.args.gradient_accumulation_steps * self.args.epochs
+        optimizer, scheduler = self.build_optimizer(model, iteration_in_total)
+
+        # training result
+        global_step = 0
+        tr_loss, logging_loss = 0.0, 0.0
+        saved_ensemble = 0
+
+        if self.args.fl_algorithm == "FedProx":
+            global_model = copy.deepcopy(model)
+
+        for epoch in range(0, self.args.epochs):
+
+            for batch_idx, batch in enumerate(self.train_dl):
+                model.train()
+                batch = tuple(t for t in batch)
+                # dataset = TensorDataset(all_guid, all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
+                x = batch[1].to(device)
+                labels = batch[4].to(device)
+
+                # (loss), logits, (hidden_states), (attentions)
+                output = model(x)
+                logits = output[0]
+
+                loss_fct = CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+
+                if self.args.fl_algorithm == "FedProx":
+                    fed_prox_reg = 0.0
+                    mu = self.args.fedprox_mu
+                    for (p, g_p) in zip(model.parameters(),
+                                        global_model.parameters()):
+                        fed_prox_reg += ((mu / 2) * torch.norm((p - g_p.data)) ** 2)
+                    loss += fed_prox_reg
+
+                # model outputs are always tuple in pytorch-transformers (see doc)
+                # loss = outputs[0]
+                # logging.info(loss)
+                current_loss = loss.item()
+                logging.info("epoch = %d, batch_idx = %d/%d, loss = %s" % (epoch, batch_idx,
+                                                                           len(self.train_dl), current_loss))
+                if self.args.gradient_accumulation_steps > 1:
+                    loss = loss / self.args.gradient_accumulation_steps
+                loss.backward()
+                tr_loss += loss.item()
+
+                if (batch_idx + 1) % self.args.gradient_accumulation_steps == 0:
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), self.args.max_grad_norm)
+                    optimizer.step()
+                    scheduler.step()  # Update learning rate schedule
+                    model.zero_grad()
+                    global_step += 1
+
+                    if self.args.evaluate_during_training and (self.args.evaluate_during_training_steps > 0
+                                                               and global_step % self.args.evaluate_during_training_steps == 0):
+                        results, _, _ = self.eval_model(epoch, global_step)
+                        logging.info(results)
+
+                if self.args.is_debug_mode == 1 and global_step > 3:
+                    break
+                if (poi_args and poi_args.ensemble) and global_step % poi_args.ensemble_save_period == 0 \
+                        and saved_ensemble < poi_args.num_ensemble:
+                    self.states.append(copy.deepcopy(model.state_dict()))
+                    saved_ensemble += 1
+        # results, _, _ = self.eval_model(self.args.epochs-1, global_step)
+        # logging.info(results)
+        return global_step, tr_loss / global_step
+
 
 
 

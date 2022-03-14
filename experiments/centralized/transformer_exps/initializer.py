@@ -154,21 +154,6 @@ def add_centralized_args(parser):
     # name of the experiment
     parser.add_argument('--exp_name', type=str, default='')
 
-    # Poison related
-    parser.add_argument('-poison', action="store_true")
-    parser.add_argument('-poison_collude', action="store_true")
-    parser.add_argument('-poison_ensemble', action="store_true")
-    parser.add_argument('--poison_num_ensemble', type=int, default=1)
-    parser.add_argument('--poison_ratio', type=float, default=0.1)
-    parser.add_argument('--poison_epochs', type=int, default=200)
-    parser.add_argument('--poison_grad_accum', type=int, default=1)
-    parser.add_argument('--poison_learning_rate', type=float, default=1e-2)
-    parser.add_argument('--poison_target_cls', type=int, default=0)
-    parser.add_argument('--poison_trigger_word', nargs='+', default="cf", help="Choices are 'cf', 'bb', 'mn', 'tq'")
-    parser.add_argument('--poison_trigger_position', default="", help="Choices are ['random', 'fixed', 'random 0 50', etc]")
-    parser.add_argument('--poison_no_norm_constraint', action="store_true")
-
-
     # For simulating client environment
     parser.add_argument('--comm_round', type=int, default=1,
                         help='how many round of communications we should use')

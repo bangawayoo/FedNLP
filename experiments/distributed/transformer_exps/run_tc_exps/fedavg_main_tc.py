@@ -29,6 +29,8 @@ from FedML.fedml_api.distributed.fedavg.FedAvgAPI import FedML_init
 from experiments.distributed.transformer_exps.initializer import add_federated_args, set_seed, create_model, \
     get_fl_algorithm_initializer
 
+from training.utils.poison_utils import add_poison_args
+
 import argparse
 import logging
 
@@ -47,6 +49,7 @@ if __name__ == "__main__":
     # parse python script input parameters
     parser = argparse.ArgumentParser()
     parser = add_federated_args(parser)
+    parser = add_poison_args(parser)
     args, possible_poi_args = parser.parse_known_args()
     set_seed(args.manual_seed)
 

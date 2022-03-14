@@ -219,6 +219,8 @@ class PoisonArgs(ModelArgs):
     no_norm_constraint: bool = False
     poison_entire_emb: bool = False
     robust_aggregation: str = "None"
+    data_poison: bool = True
+    data_poison_ratio = 1.0
 
     evaluate_during_training_steps: int = 20
     gradient_accumulation_steps: int = 1
