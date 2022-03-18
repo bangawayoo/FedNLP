@@ -22,8 +22,8 @@ python experiments/centralized/transformer_exps/main_tc_poison.py \
     --evaluate_during_training_steps 100 \
     --output_dir ~/${DATA_NAME}_fed/datap \
     --n_gpu 1 \
-    -poison \
-    --poison_trigger_position "random 0 30"\
-    --poison_trigger_word "cf" "cf" "cf" \
-    -data_poison --data_poison_ratio 1.0
+#    -poison \
+#    --poison_trigger_position "random 0 30"\
+#    --poison_trigger_word "cf" "cf" "cf" \
+#    -data_poison --data_poison_ratio 1.0
     #    --freeze_layers $LAYERS

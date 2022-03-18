@@ -220,7 +220,7 @@ class PoisonArgs(ModelArgs):
     poison_entire_emb: bool = False
     robust_aggregation: str = "None"
     data_poison: bool = False
-    data_poison_ratio = 1.0
+    data_poison_ratio: float = 1.0
 
     evaluate_during_training_steps: int = 20
     gradient_accumulation_steps: int = 1
@@ -240,5 +240,7 @@ class PoisonArgs(ModelArgs):
                                'epochs': args.poison_epochs,
                                'ensemble': args.poison_ensemble,
                                'num_ensemble': args.poison_num_ensemble,
-                               'collude': args.poison_collude
+                               'collude': args.poison_collude,
+                               'data_poison': args.data_poison,
+                               'data_poison_ratio': args.data_poison_ratio
                                })

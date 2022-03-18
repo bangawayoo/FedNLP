@@ -125,7 +125,7 @@ class TextClassificationTrainer:
                 # logging.info(loss)
                 current_loss = loss.item()
                 logging.info("epoch = %d, batch_idx = %d/%d, loss = %s" % (epoch, batch_idx,
-                                                                           len(self.train_dl), current_loss))
+                                                                           len(train_dl), current_loss))
                 if self.args.gradient_accumulation_steps > 1:
                     loss = loss / self.args.gradient_accumulation_steps
                 loss.backward()
@@ -156,6 +156,7 @@ class TextClassificationTrainer:
             all_preds = torch.cat(all_preds, dim=0)
             per_cls_metrics = compute_acc_per_cls(all_preds, all_labels)
             logging.info(per_cls_metrics)
+
         # results, _, _ = self.eval_model(self.args.epochs-1, global_step)
         # logging.info(results)
         return global_step, tr_loss / global_step

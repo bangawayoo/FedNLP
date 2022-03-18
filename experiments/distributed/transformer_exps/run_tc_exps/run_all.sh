@@ -52,11 +52,11 @@ do
       --epochs 3 \
       --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
        \
-      -poison --poison_ratio 0.1 --poison_epochs 100 \
+      -poison --poison_ratio 0.5 \
       --poison_trigger_word "cf" "bb" "mn" \
       --poison_trigger_pos "random 0 15" --manual_seed $seed \
-      -data_poison \ 
-      --exp_name "SMALL-median-pratio=0.1-alpha=$alpha-seed=$seed"
+      -data_poison --data_poison_ratio 1.0 \
+      --exp_name "datap-pratio=0.5-alpha=$alpha-seed=$seed"
 
     done
 done

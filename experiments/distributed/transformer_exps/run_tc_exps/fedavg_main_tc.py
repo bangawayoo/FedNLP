@@ -137,6 +137,7 @@ if __name__ == "__main__":
     #Init Poisoned Args.
     poi_args = PoisonArgs()
     poi_args.update_from_args(args)
+
     # trainer
     client_trainer = TextClassificationTrainer(
         model_args, device, client_model, None, None)

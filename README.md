@@ -30,6 +30,13 @@ cd FedML; git submodule init; git submodule update; cd ../;
 # unzip bleurt-base-128.zip
 ```
 
+### Possible Errors 
+Error installing mpi4py
+```
+# After installing mpi using apt-get 
+conda install -c anaconda mpi4py
+```
+
 ## Code Structure of FedNLP
 <!-- Note: The code of FedNLP only uses `FedML/fedml_core` and `FedML/fedml_api`.
 In near future, once FedML is stable, we will release it as a python package. 
