@@ -49,14 +49,14 @@ do
       --max_seq_length 256 \
       --lr $C_LR \
       --server_lr $S_LR --server_momentum 0.9 \
-      --epochs 3 \
+      --epochs 1 --manual_seed $seed \
       --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
        \
-      -poison --poison_ratio 0.5 \
+      -poison --poison_ratio 0.1 \
       --poison_trigger_word "cf" "bb" "mn" \
-      --poison_trigger_pos "random 0 15" --manual_seed $seed \
+      --poison_trigger_pos "random 0 15" \
       -data_poison --data_poison_ratio 1.0 \
-      --exp_name "datap-pratio=0.5-alpha=$alpha-seed=$seed"
+      --exp_name "datap-pratio=0.1-alpha=$alpha-seed=$seed-pos=random"
 
     done
 done

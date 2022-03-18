@@ -4,7 +4,7 @@ import h5py
 import json
 
 import torch
-from torch.utils.data import TensorDataset
+from torch.utils.data import TensorDataset, RandomSampler
 
 from data_preprocessing.base.base_data_loader import BaseDataLoader
 from tqdm import tqdm
@@ -340,11 +340,13 @@ class BaseDataManager(ABC):
                         tmp = torch.cat([tensor_data, ptensor_data[:num_poison]], dim=0)
                         new_tensor_data.append(tmp)
                     poi_train_dataset = TensorDataset(*new_tensor_data)
+                    sampler = RandomSampler(poi_train_dataset, replacement=True, num_samples=len(train_examples))
+
                     poi_train_loader = BaseDataLoader(poi_train_examples, poi_train_features, poi_train_dataset,
                                                       batch_size=self.train_batch_size,
                                                       num_workers=0,
                                                       pin_memory=True,
-                                                      drop_last=False, shuffle=True)
+                                                      drop_last=False, sampler=sampler)
                     poi_train_data_local_dict[client_idx] = poi_train_loader
 
         data_file.close()

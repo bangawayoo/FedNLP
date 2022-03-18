@@ -152,10 +152,16 @@ class TextClassificationTrainer:
                         and saved_ensemble < poi_args.num_ensemble:
                     self.states.append(copy.deepcopy(model.state_dict()))
                     saved_ensemble += 1
+
             all_labels = torch.cat(all_labels, dim=0)
             all_preds = torch.cat(all_preds, dim=0)
             per_cls_metrics = compute_acc_per_cls(all_preds, all_labels)
-            logging.info(per_cls_metrics)
+            logging.info(f"Per Class Acc. {per_cls_metrics}")
+
+            correct = all_preds.eq(all_labels).sum().item()
+            total = all_preds.numel()
+            logging.info(f"Train Acc. {correct/total}")
+
 
         # results, _, _ = self.eval_model(self.args.epochs-1, global_step)
         # logging.info(results)
