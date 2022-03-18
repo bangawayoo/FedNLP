@@ -9,7 +9,7 @@ S_LR="1.0"
 ROUND=50
 
 export WANDB_START_METHOD="thread"
-wandb disabled
+wandb enabled
 LOG_FILE="fedavg_transformer_tc.log"
 CI=0
 
