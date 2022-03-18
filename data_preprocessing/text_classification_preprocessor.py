@@ -154,8 +154,8 @@ class TLMPreprocessor(BasePreprocessor):
         poisoned = []
         examples = copy.deepcopy(examples)
         for ex in examples:
-            poison_ex = self.__add_trigger_word(ex, trigger, target_cls, trigger_pos)
-            if poison_ex is not None:
+            if ex.label != target_cls:
+                poison_ex = self.__add_trigger_word(ex, trigger, target_cls, trigger_pos)
                 poisoned.append(poison_ex)
         features = self.transform_features(poisoned, evaluate=False)
 
@@ -174,8 +174,6 @@ class TLMPreprocessor(BasePreprocessor):
         example: TextClassificationInputExample
             attributes: label, text_a
         """
-        if example.label == target_cls:
-            return None
         example.label = target_cls
         text_list = example.text_a.split(' ')
         trigger_pos_parsed = trigger_pos.split(' ')
