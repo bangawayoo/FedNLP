@@ -124,7 +124,7 @@ class TextClassificationTrainer:
                 # loss = outputs[0]
                 # logging.info(loss)
                 current_loss = loss.item()
-                logging.info("epoch = %d, batch_idx = %d/%d, loss = %s" % (epoch, batch_idx,
+                logging.info("epoch = %d, batch_idx = %d/%d, loss = %s" % (epoch, batch_idx+1,
                                                                            len(train_dl), current_loss))
                 if self.args.gradient_accumulation_steps > 1:
                     loss = loss / self.args.gradient_accumulation_steps
