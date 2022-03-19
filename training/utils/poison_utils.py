@@ -24,15 +24,6 @@ def return_success_ratio(acc, success_criterion=[0.5, 0.6, 0.7, 0.8, 0.9]):
     cnt = (acc > s).sum(0) / acc.shape[0] #(num_seeds)
     success.append(np.expand_dims(cnt, axis=-1))
 
-  # attacked_rounds = num_poison.nonzero()[0]
-  # backdoor_acc_deltas = []
-  # for idx, r in enumerate(attacked_rounds):
-  #   before_att_acc = 0 if idx == 0 else acc[idx - 1]
-  #   next_att_round = attacked_rounds[idx + 1] if idx < len(attacked_rounds) - 1 else len(acc)
-  #   for next_r in range(r, next_att_round):
-  #     delta = acc[next_r] - before_att_acc
-  #     backdoor_acc_deltas.append(delta)
-
   return np.concatenate(success, axis=-1)
 
 def add_poison_args(parser):
@@ -48,6 +39,7 @@ def add_poison_args(parser):
   # Data Poisoning
   parser.add_argument('-data_poison', action="store_true")
   parser.add_argument('--data_poison_ratio', type=float, default=1.0)
+  parser.add_argument('-collude_data', action="store_true")
 
   parser.add_argument('--poison_epochs', type=int, default=200)
   parser.add_argument('--poison_grad_accum', type=int, default=1)

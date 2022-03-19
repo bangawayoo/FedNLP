@@ -167,7 +167,7 @@ class TLMPreprocessor(BasePreprocessor):
 
         dataset = TensorDataset(all_guid, all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
 
-        return examples, features, dataset
+        return poisoned, features, dataset
 
     def __add_trigger_word(self, example, trigger, target_cls, trigger_pos):
         """

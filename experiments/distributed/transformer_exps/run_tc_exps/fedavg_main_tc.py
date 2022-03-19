@@ -30,6 +30,9 @@ from experiments.distributed.transformer_exps.initializer import add_federated_a
     get_fl_algorithm_initializer
 
 from training.utils.poison_utils import add_poison_args
+from torch.utils.data import TensorDataset, RandomSampler
+from data_preprocessing.base.base_data_loader import BaseDataLoader
+
 
 import argparse
 import logging
@@ -151,34 +154,36 @@ if __name__ == "__main__":
 
     # Sample poisoned client idx
     if poi_args.use:
-      trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
-      num_poison = int(poi_args.ratio * num_clients)
-      random.seed(args.manual_seed) # To ensure all processes have the same poisoned samples
-      poisoned_idx = random.sample(population=list(range(num_clients)), k=num_poison)
-      logging.info(f"poi indices {poisoned_idx}")
-      poi_args.update_from_dict({
+        num_poison = int(poi_args.ratio * num_clients)
+        random.seed(args.manual_seed) # To ensure all processes have the same poisoned samples
+        poisoned_idx = random.sample(population=list(range(num_clients)), k=num_poison)
+        logging.info(f"poi indices {poisoned_idx}")
+        trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
+
+        poi_args.update_from_dict({
                       'poisoned_client_idxs': poisoned_idx,
                        'num_poisoned': num_poison,
                        'train_data_local_dict': poi_train_data_local_dict,
                        'test_data_local_dict': poi_test_data_local_dict,
                        'trigger_idx': trigger_word_idx,
                                  })
-      if possible_poi_args:
-        to_dict = {}
-        for idx in range(len(possible_poi_args) // 2):
-          k = possible_poi_args[idx * 2].replace("-", "")
-          v = possible_poi_args[idx * 2 + 1]
-          to_dict[k] = v
-        poi_args.update_from_dict(to_dict)
-      keys_2_save = ['use', 'target_cls', 'trigger_word', 'poisoned_client_idxes', 'ratio',
+        if possible_poi_args:
+            to_dict = {}
+            for idx in range(len(possible_poi_args) // 2):
+              k = possible_poi_args[idx * 2].replace("-", "")
+              v = possible_poi_args[idx * 2 + 1]
+              to_dict[k] = v
+            poi_args.update_from_dict(to_dict)
+
+        keys_2_save = ['use', 'target_cls', 'trigger_word', 'poisoned_client_idxes', 'ratio',
                      'centralized_env', 'early_stop', 'epochs', 'gradient_accumulation_steps', 'learning_rate',
                      'ensemble', 'num_ensemble']
-      poi_args_dict = poi_args.get_args_for_saving()
-      poi_args_2_save = {}
-      poi_args_2_save.update([(f"poi-{key}", poi_args_dict.get(key, None)) for key in keys_2_save])
-      if process_id == 0:
-        logging.info(poi_args)
-        wandb.config.update(poi_args_2_save)
+        poi_args_dict = poi_args.get_args_for_saving()
+        poi_args_2_save = {}
+        poi_args_2_save.update([(f"poi-{key}", poi_args_dict.get(key, None)) for key in keys_2_save])
+        if process_id == 0:
+            logging.info(poi_args)
+            wandb.config.update(poi_args_2_save)
 
     # start FedAvg algorithm
     # for distributed algorithm, train_data_global and test_data_global are required

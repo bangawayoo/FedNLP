@@ -275,8 +275,9 @@ class BaseDataManager(ABC):
         num_poison = int(self.poi_args.ratio * self.num_clients)
         random.seed(self.args.manual_seed)  # ensure all processes have the same poisoned samples
         poisoned_idx = random.sample(population=list(range(self.num_clients)), k=num_poison)
+        combined_indices = list(set(self.client_index_list + poisoned_idx))
 
-        for client_idx in self.client_index_list:
+        for client_idx in combined_indices:
             # TODO: cancel the partiation file usage
             state, res = self._load_data_loader_from_cache(client_idx)
             if state:
@@ -354,6 +355,31 @@ class BaseDataManager(ABC):
                                                       pin_memory=True,
                                                       drop_last=False, sampler=sampler)
                     poi_train_data_local_dict[client_idx] = poi_train_loader
+
+        if self.poi_args.use and self.poi_args.collude_data:
+            # Init. variables to store all poisoned data
+            collude_examples, collude_features, collude_dataset = [], [], [[] for _ in
+                                                                           range(len(poi_train_dataset.tensors))]
+            for client_idx in poisoned_idx:
+                loader = poi_train_data_local_dict[client_idx]
+                collude_examples.extend(loader.examples)
+                collude_features.extend(loader.features)
+                for idx, tensor in enumerate(loader.dataset.tensors):
+                    collude_dataset[idx].append(tensor)
+
+            for idx, list_of_tensors in enumerate(collude_dataset):
+                collude_dataset[idx] = torch.cat(list_of_tensors, dim=0)
+
+            collude_poi_train_dataset = TensorDataset(*collude_dataset)
+            sampler = RandomSampler(collude_poi_train_dataset, replacement=True, num_samples=len(train_examples))
+
+            poi_train_loader = BaseDataLoader(collude_examples, collude_features, collude_poi_train_dataset,
+                                              batch_size=self.train_batch_size,
+                                              num_workers=0,
+                                              pin_memory=True,
+                                              drop_last=False, sampler=sampler)
+            for poi_idx in poisoned_idx:
+                poi_train_data_local_dict[poi_idx] = poi_train_loader
 
         data_file.close()
         partition_file.close()

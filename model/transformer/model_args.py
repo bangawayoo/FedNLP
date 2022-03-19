@@ -221,6 +221,7 @@ class PoisonArgs(ModelArgs):
     robust_aggregation: str = "None"
     data_poison: bool = False
     data_poison_ratio: float = 1.0
+    collude_data: bool = False
 
     evaluate_during_training_steps: int = 20
     gradient_accumulation_steps: int = 1
