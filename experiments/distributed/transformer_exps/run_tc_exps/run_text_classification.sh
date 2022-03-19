@@ -52,10 +52,10 @@ do
     --server_lr $S_LR --server_momentum 0.9 \
     --epochs 1 \
     --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
-    -poison --poison_ratio 0.05 --poison_epochs 100 \
-    -data_poison --data_poison_ratio 1.0 -collude_data\
+    -poison --poison_ratio 0.1 --poison_epochs 100 \
+    -data_poison --data_poison_ratio 1.0 -collude_data \
     --poison_trigger_word "cf" "bb" "mn" \
     --poison_trigger_pos "random 0 15" \
-    --exp_name "entire_embedding"
+    --exp_name "entire_embedding" --reprocess_input_data
   done
 done

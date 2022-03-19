@@ -230,6 +230,7 @@ class PoisonArgs(ModelArgs):
     evaluate_during_training: bool = False
 
     def update_from_args(self, args):
+        # self.update_from_dict(vars(args))
         self.update_from_dict({'use': args.poison,
                                 'target_cls': args.poison_target_cls,
                                 'trigger_word': args.poison_trigger_word,
@@ -243,5 +244,6 @@ class PoisonArgs(ModelArgs):
                                'num_ensemble': args.poison_num_ensemble,
                                'collude': args.poison_collude,
                                'data_poison': args.data_poison,
-                               'data_poison_ratio': args.data_poison_ratio
+                               'data_poison_ratio': args.data_poison_ratio,
+                               'collude_data': args.collude_data
                                })

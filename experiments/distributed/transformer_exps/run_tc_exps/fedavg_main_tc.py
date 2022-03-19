@@ -155,7 +155,8 @@ if __name__ == "__main__":
     # Sample poisoned client idx
     if poi_args.use:
         num_poison = int(poi_args.ratio * num_clients)
-        random.seed(args.manual_seed) # To ensure all processes have the same poisoned samples
+        # To ensure all processes have the same poisoned samples
+        random.seed(args.manual_seed)
         poisoned_idx = random.sample(population=list(range(num_clients)), k=num_poison)
         logging.info(f"poi indices {poisoned_idx}")
         trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
