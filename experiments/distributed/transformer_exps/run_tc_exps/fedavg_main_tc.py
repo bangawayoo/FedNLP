@@ -76,9 +76,6 @@ if __name__ == "__main__":
 
     # logging.info("process_id = %d, size = %d" % (process_id, worker_number))
 
-    # broadcast time for grouping
-    # group_id_data = comm.bcast(group_id, root=0)
-
     # initialize the wandb machine learning experimental tracking platform (https://wandb.ai/automl/fednlp).
     exp_name = str(args.dataset) + "-" \
                 + str(args.model_name) + "-" + args.exp_name

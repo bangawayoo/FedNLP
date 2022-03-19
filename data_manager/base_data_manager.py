@@ -1,4 +1,5 @@
 import pdb
+import random
 from abc import ABC, abstractmethod
 import h5py
 import json
@@ -270,6 +271,11 @@ class BaseDataManager(ABC):
         self.client_index_list = list(set(self.client_index_list))
         logging.info("self.client_index_list = " + str(self.client_index_list))
 
+        # Sampling poisoning indices
+        num_poison = int(self.poi_args.ratio * self.num_clients)
+        random.seed(self.args.manual_seed)  # ensure all processes have the same poisoned samples
+        poisoned_idx = random.sample(population=list(range(self.num_clients)), k=num_poison)
+
         for client_idx in self.client_index_list:
             # TODO: cancel the partiation file usage
             state, res = self._load_data_loader_from_cache(client_idx)
@@ -312,7 +318,7 @@ class BaseDataManager(ABC):
             test_data_local_dict[client_idx] = test_loader
             train_data_local_num_dict[client_idx] = len(train_loader)
 
-            if self.poi_args.use:
+            if self.poi_args.use and client_idx in poisoned_idx:
                 poi_train_examples, poi_train_features, poi_train_dataset = self.preprocessor.convert_to_poison(
                     train_examples, self.poi_args.trigger_word, self.poi_args.target_cls, self.poi_args.trigger_pos)
                 poi_test_examples, poi_test_features, poi_test_dataset = self.preprocessor.convert_to_poison(
