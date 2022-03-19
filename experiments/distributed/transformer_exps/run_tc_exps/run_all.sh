@@ -30,8 +30,8 @@ for alpha in $ALPHA
 do
   for seed in $SEED
   do
-#    for pratio in $PRATIO
-#    do
+    for pratio in $PRATIO
+    do
 #      mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
       tmux-mpi $PROCESS_NUM gdb --ex run --args \
       python -m fedavg_main_tc \
