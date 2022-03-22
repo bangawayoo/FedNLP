@@ -29,9 +29,7 @@ from FedML.fedml_api.distributed.fedavg.FedAvgAPI import FedML_init
 from experiments.distributed.transformer_exps.initializer import add_federated_args, set_seed, create_model, \
     get_fl_algorithm_initializer
 
-from training.utils.poison_utils import add_poison_args
-from torch.utils.data import TensorDataset, RandomSampler
-from data_preprocessing.base.base_data_loader import BaseDataLoader
+from training.utils.poison_utils import add_poison_args, get_frequency
 
 
 import argparse
@@ -54,6 +52,11 @@ if __name__ == "__main__":
     parser = add_federated_args(parser)
     parser = add_poison_args(parser)
     args, possible_poi_args = parser.parse_known_args()
+    adv_sampling_freq = None
+    if args.poison and args.adv_sampling == "fixed":
+        adv_sampling_freq = get_frequency(args)
+
+
     set_seed(args.manual_seed)
 
     # initialize distributed computing (MPI)
@@ -167,6 +170,8 @@ if __name__ == "__main__":
                        'train_data_local_dict': poi_train_data_local_dict,
                        'test_data_local_dict': poi_test_data_local_dict,
                        'trigger_idx': trigger_word_idx,
+                       'process_id': process_id,
+                       'adv_sampling_freq': adv_sampling_freq
                                  })
         if possible_poi_args:
             to_dict = {}
@@ -176,16 +181,14 @@ if __name__ == "__main__":
               to_dict[k] = v
             poi_args.update_from_dict(to_dict)
 
-        keys_2_save = ['use', 'target_cls', 'trigger_word', 'poisoned_client_idxes', 'ratio',
-                     'centralized_env', 'early_stop', 'epochs', 'gradient_accumulation_steps', 'learning_rate',
-                     'ensemble', 'num_ensemble']
-        poi_args_dict = poi_args.get_args_for_saving()
-        poi_args_2_save = {}
-        poi_args_2_save.update([(f"poi-{key}", poi_args_dict.get(key, None)) for key in keys_2_save])
+        # keys_2_save = ['use', 'target_cls', 'trigger_word', 'poisoned_client_idxes', 'ratio',
+        #              'centralized_env', 'early_stop', 'epochs', 'gradient_accumulation_steps', 'learning_rate',
+        #              'ensemble', 'num_ensemble']
+        # poi_args_dict = poi_args.get_args_for_saving()
+        # poi_args_2_save = {}
+        # poi_args_2_save.update([(f"poi-{key}", poi_args_dict.get(key, None)) for key in keys_2_save])
         if process_id == 0:
             logging.info(poi_args)
-            wandb.config.update(poi_args_2_save)
-
     # start FedAvg algorithm
     # for distributed algorithm, train_data_global and test_data_global are required
     if process_id == 0:

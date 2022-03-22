@@ -41,6 +41,7 @@ def add_poison_args(parser):
   parser.add_argument('--data_poison_ratio', type=float, default=1.0)
   parser.add_argument('-collude_data', action="store_true")
 
+  parser.add_argument('--adv_sampling', type=str, default="random")
   parser.add_argument('--poison_epochs', type=int, default=200)
   parser.add_argument('--poison_grad_accum', type=int, default=1)
   parser.add_argument('--poison_learning_rate', type=float, default=1e-2)
@@ -51,3 +52,17 @@ def add_poison_args(parser):
   parser.add_argument('--poison_no_norm_constraint', action="store_true")
 
   return parser
+
+
+def is_poi_client(poi_args, client_idx, poisoned_client_idxs):
+  if poi_args and poi_args.use:
+    if poi_args.adv_sampling == "random":
+      return True if client_idx in poisoned_client_idxs else False
+    if poi_args.adv_sampling == "fixed" and client_idx == 0:
+      return True
+  else:
+    return False
+
+
+def get_frequency(args):
+  return round(1 / (args.client_num_per_round * args.poison_ratio))

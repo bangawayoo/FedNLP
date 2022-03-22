@@ -245,5 +245,6 @@ class PoisonArgs(ModelArgs):
                                'collude': args.poison_collude,
                                'data_poison': args.data_poison,
                                'data_poison_ratio': args.data_poison_ratio,
-                               'collude_data': args.collude_data
+                               'collude_data': args.collude_data,
+                               'adv_sampling': args.adv_sampling
                                })

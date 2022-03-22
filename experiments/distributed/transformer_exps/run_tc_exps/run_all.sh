@@ -6,7 +6,7 @@ GPU_MAPPING=$3
 
 C_LR="5e-5"
 S_LR="1.0"
-ROUND=100
+ROUND=50
 
 export WANDB_START_METHOD="thread"
 wandb enabled
@@ -20,10 +20,10 @@ echo $PROCESS_NUM
 
 hostname > mpi_host_file
 
-NUM_CLIENT=500
+NUM_CLIENT=100
 ALPHA="1.0"
 PRATIO="0.05 0.1"
-SEED="0"
+SEED="42 0 1 2 3"
 #tmux-mpi $PROCESS_NUM gdb --ex run --args \
 #mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
 for alpha in $ALPHA
@@ -53,14 +53,16 @@ do
         --max_seq_length 256 \
         --lr $C_LR \
         --server_lr $S_LR --server_momentum 0.9 \
-        --epochs 5 --manual_seed $seed \
+        --epochs 1 --manual_seed $seed \
         --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
-        --exp_name "NC=$NUM_CLIENT-datap-pratio=$pratio-alpha=$alpha-seed=$seed-pos=fixed" \
+        --exp_name "NC=$NUM_CLIENT-modelp-pratio=$pratio-alpha=$alpha-seed=$seed-pos=random-sampling=fixed" \
          \
         -poison --poison_ratio $pratio \
         --poison_trigger_word "cf" "bb" "mn" \
-        --poison_trigger_pos "fixed 0" \
-        -data_poison --data_poison_ratio 1.0 -collude_data\
+        --poison_trigger_pos "random 0 15" \
+        --adv_sampling "fixed" \
+
+#        -data_poison --data_poison_ratio 1.0 -collude_data\
 
 #      mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
 #      python -m fedavg_main_tc \

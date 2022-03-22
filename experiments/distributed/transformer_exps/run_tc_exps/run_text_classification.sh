@@ -5,12 +5,12 @@ GPU_MAPPING=$3
 
 C_LR="5e-5"
 S_LR="1.0"
-ROUND=100
+ROUND=50
 NUM_CLIENT=100
 
 hostname > mpi_host_file
 export WANDB_START_METHOD="thread"
-wandb disabled
+wandb enabled
 LOG_FILE="fedavg_transformer_tc.log"
 CI=0
 
@@ -52,10 +52,12 @@ do
     --server_lr $S_LR --server_momentum 0.9 \
     --epochs 1 \
     --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
+    --exp_name "fixed_freq" \
     -poison --poison_ratio 0.1 --poison_epochs 100 \
-    -data_poison --data_poison_ratio 1.0 -collude_data \
+    --adv_sampling "fixed" \
     --poison_trigger_word "cf" "bb" "mn" \
     --poison_trigger_pos "random 0 15" \
-    --exp_name "entire_embedding" --reprocess_input_data
+#    -data_poison --data_poison_ratio 1.0 -collude_data
+
   done
 done

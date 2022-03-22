@@ -41,8 +41,6 @@ class BaseDataManager(ABC):
         self.num_clients = self.load_num_clients(
             self.args.partition_file_path, self.args.partition_method)
         # TODO: sync to the same logic to sample index
-        # self.client_index_list = self.sample_client_index(process_id, num_workers)
-        # self.client_index_list = self.get_all_clients()
         self.client_index_list = self.sample_client_index(process_id, num_workers)
 
     @staticmethod
@@ -84,7 +82,7 @@ class BaseDataManager(ABC):
                 # make sure for each comparison, we are selecting the same clients each round
                 np.random.seed(round_idx)
                 client_indexes = np.random.choice(
-                    range(self.num_clients),
+                    range(1, self.num_clients),
                     nc, replace=False)
                 # logging.info("client_indexes = %s" % str(client_indexes))
             res_client_indexes.append(client_indexes[process_id-1])
@@ -272,13 +270,18 @@ class BaseDataManager(ABC):
         logging.info("self.client_index_list = " + str(self.client_index_list))
 
         # Sampling poisoning indices
-        num_poison = int(self.poi_args.ratio * self.num_clients)
-        random.seed(self.args.manual_seed)  # ensure all processes have the same poisoned samples
-        poisoned_idx = random.sample(population=list(range(self.num_clients)), k=num_poison)
-        combined_indices = list(set(self.client_index_list + poisoned_idx))
+        poisoned_idx = []
+        if self.poi_args.adv_sampling == "random":
+            num_poison = int(self.poi_args.ratio * self.num_clients)
+            random.seed(self.args.manual_seed)  # ensure all processes have the same poisoned samples
+            poisoned_idx = random.sample(population=list(range(self.num_clients)), k=num_poison)
+        elif self.poi_args.adv_sampling == "fixed" and self.process_id == 1:
+            # For fixed freqeuncy sampling, 0 is always the adv. index
+            poisoned_idx = [0]
 
+        combined_indices = list(set(self.client_index_list + poisoned_idx))
         for client_idx in combined_indices:
-            # TODO: cancel the partiation file usage
+            # TODO: cancel the partition file usage
             state, res = self._load_data_loader_from_cache(client_idx)
             if state:
                 train_examples, train_features, train_dataset, test_examples, test_features, test_dataset = res
@@ -317,56 +320,60 @@ class BaseDataManager(ABC):
                                     drop_last=False)
 
             # Exclude poisoned indices not in worker's client indices
-            if client_idx in self.client_index_list or get_all_indices:
+            if client_idx in self.client_index_list or get_all_indices or client_idx==0:
                 train_data_local_dict[client_idx] = train_loader
                 test_data_local_dict[client_idx] = test_loader
                 train_data_local_num_dict[client_idx] = len(train_loader)
 
-            if self.poi_args.use and client_idx in poisoned_idx:
-                poi_train_examples, poi_train_features, poi_train_dataset = self.preprocessor.convert_to_poison(
-                    train_examples, self.poi_args.trigger_word, self.poi_args.target_cls, self.poi_args.trigger_pos)
-                poi_test_examples, poi_test_features, poi_test_dataset = self.preprocessor.convert_to_poison(
-                    test_examples, self.poi_args.trigger_word, self.poi_args.target_cls, self.poi_args.trigger_pos)
-                if len(poi_train_dataset) > 0:
-                    poi_train_loader = BaseDataLoader(poi_train_examples, poi_train_features, poi_train_dataset,
-                                                      batch_size=self.train_batch_size,
-                                                      num_workers=0,
-                                                      pin_memory=True,
-                                                      drop_last=False, shuffle=True)
-                    poi_train_data_local_dict[client_idx] = poi_train_loader
+            poison_flag = False
+            if self.poi_args.use:
+                if (self.poi_args.adv_sampling == "fixed" and self.process_id == 1 and client_idx == 0) or \
+                        (self.poi_args.adv_sampling == "random" and client_idx in poisoned_idx):
+                    poison_flag = True
+                    poi_train_examples, poi_train_features, poi_train_dataset = self.preprocessor.convert_to_poison(
+                        train_examples, self.poi_args.trigger_word, self.poi_args.target_cls, self.poi_args.trigger_pos)
+                    poi_test_examples, poi_test_features, poi_test_dataset = self.preprocessor.convert_to_poison(
+                        test_examples, self.poi_args.trigger_word, self.poi_args.target_cls, self.poi_args.trigger_pos)
+                    if len(poi_train_dataset) > 0:
+                        poi_train_loader = BaseDataLoader(poi_train_examples, poi_train_features, poi_train_dataset,
+                                                          batch_size=self.train_batch_size,
+                                                          num_workers=0,
+                                                          pin_memory=True,
+                                                          drop_last=False, shuffle=True)
+                        poi_train_data_local_dict[client_idx] = poi_train_loader
 
-                if len(poi_test_dataset) > 0:
-                    poi_test_loader = BaseDataLoader(poi_test_examples, poi_test_features, poi_test_dataset,
-                                                 batch_size=self.eval_batch_size,
-                                                 num_workers=0,
-                                                 pin_memory=True,
-                                                 drop_last=False)
-                    poi_test_data_local_dict[client_idx] = poi_test_loader
+                    if len(poi_test_dataset) > 0:
+                        poi_test_loader = BaseDataLoader(poi_test_examples, poi_test_features, poi_test_dataset,
+                                                     batch_size=self.eval_batch_size,
+                                                     num_workers=0,
+                                                     pin_memory=True,
+                                                     drop_last=False)
+                        poi_test_data_local_dict[client_idx] = poi_test_loader
 
-                if self.poi_args.data_poison:
-                    logging.info("Creating poisoned dataset")
-                    num_poison = int(self.poi_args.data_poison_ratio * len(train_examples))
-                    num_poison = min(num_poison, len(poi_train_examples))
-                    poi_train_examples = poi_train_examples[:num_poison] + train_examples
-                    poi_train_features = poi_train_features[:num_poison] + train_features
-                    new_tensor_data = []
-                    for tensor_data, ptensor_data in zip(train_dataset.tensors, poi_train_dataset.tensors):
-                        if ptensor_data.shape[0] > 0:
-                            tmp = torch.cat([tensor_data, ptensor_data[:num_poison]], dim=0)
-                            new_tensor_data.append(tmp)
-                        else:
-                            new_tensor_data.append(tensor_data)
-                    poi_train_dataset = TensorDataset(*new_tensor_data)
-                    sampler = RandomSampler(poi_train_dataset, replacement=True, num_samples=len(train_examples))
+                    if self.poi_args.data_poison:
+                        logging.info("Creating poisoned dataset")
+                        num_poison = int(self.poi_args.data_poison_ratio * len(train_examples))
+                        num_poison = min(num_poison, len(poi_train_examples))
+                        poi_train_examples = poi_train_examples[:num_poison] + train_examples
+                        poi_train_features = poi_train_features[:num_poison] + train_features
+                        new_tensor_data = []
+                        for tensor_data, ptensor_data in zip(train_dataset.tensors, poi_train_dataset.tensors):
+                            if ptensor_data.shape[0] > 0:
+                                tmp = torch.cat([tensor_data, ptensor_data[:num_poison]], dim=0)
+                                new_tensor_data.append(tmp)
+                            else:
+                                new_tensor_data.append(tensor_data)
+                        poi_train_dataset = TensorDataset(*new_tensor_data)
+                        sampler = RandomSampler(poi_train_dataset, replacement=True, num_samples=len(train_examples))
 
-                    poi_train_loader = BaseDataLoader(poi_train_examples, poi_train_features, poi_train_dataset,
-                                                      batch_size=self.train_batch_size,
-                                                      num_workers=0,
-                                                      pin_memory=True,
-                                                      drop_last=False, sampler=sampler)
-                    poi_train_data_local_dict[client_idx] = poi_train_loader
+                        poi_train_loader = BaseDataLoader(poi_train_examples, poi_train_features, poi_train_dataset,
+                                                          batch_size=self.train_batch_size,
+                                                          num_workers=0,
+                                                          pin_memory=True,
+                                                          drop_last=False, sampler=sampler)
+                        poi_train_data_local_dict[client_idx] = poi_train_loader
 
-        if self.poi_args.use and self.poi_args.collude_data:
+        if poison_flag and self.poi_args.collude_data:
             # Init. variables to store all poisoned data
             collude_examples, collude_features, collude_dataset = [], [], [[] for _ in
                                                                            range(len(poi_train_dataset.tensors))]
