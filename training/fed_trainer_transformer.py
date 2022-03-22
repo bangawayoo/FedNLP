@@ -21,9 +21,9 @@ class FedTransformerTrainer(ModelTrainer):
         self.model_trainer.train_dl = train_data
         self.model_trainer.train_model(device=device, poi_args=poi_args)
 
-    def poison_model(self, data, device, args):
-        logging.info("Poisoned Client(%d)" % self.id + ":| Local Train Data Size = %d" % (len(data[0])))
-        train_data, test_data = data
+    def poison_model(self, pdata, device, args):
+        logging.info("Poisoned Client(%d)" % self.id + ":| Local Train Data Size = %d" % (len(pdata[0])))
+        train_data, test_data = pdata
         poisoned_entity = "Data" if args.data_poison else "Model"
         logging.info(f"Poisoning {poisoned_entity}")
         if args.ensemble:

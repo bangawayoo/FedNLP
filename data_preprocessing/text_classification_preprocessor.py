@@ -191,7 +191,7 @@ class TLMPreprocessor(BasePreprocessor):
         return example
 
     def return_trigger_idx(self, trigger):
-        assert isinstance(trigger, str) or isinstance(trigger, list), f"Trigger is {type(trigger)}, should be str instance"
+        assert isinstance(trigger, str) or isinstance(trigger, list), f"Trigger is {type(trigger)}, should be str or list instance"
         trigger = [trigger] if isinstance(trigger, str) else trigger
         idx = self.tokenizer(trigger, add_special_tokens=False).input_ids # List of list of indices
         idx = [i[0] for i in idx]

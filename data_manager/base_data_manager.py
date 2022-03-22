@@ -256,7 +256,7 @@ class BaseDataManager(ABC):
                 train_data_local_num_dict, train_data_local_dict, test_data_local_dict, self.num_clients,
                 poi_train_data_local_dict, poi_test_data_local_dict)
 
-    def _load_federated_data_local(self):
+    def _load_federated_data_local(self, get_all_indices=False):
 
         data_file = h5py.File(self.args.data_file_path, "r", swmr=True)
         partition_file = h5py.File(
@@ -317,7 +317,7 @@ class BaseDataManager(ABC):
                                     drop_last=False)
 
             # Exclude poisoned indices not in worker's client indices
-            if client_idx in self.client_index_list:
+            if client_idx in self.client_index_list or get_all_indices:
                 train_data_local_dict[client_idx] = train_loader
                 test_data_local_dict[client_idx] = test_loader
                 train_data_local_num_dict[client_idx] = len(train_loader)
