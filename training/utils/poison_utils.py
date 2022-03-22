@@ -55,14 +55,16 @@ def add_poison_args(parser):
 
 
 def is_poi_client(poi_args, client_idx, poisoned_client_idxs):
+  client_idx = int(client_idx)
   if poi_args and poi_args.use:
     if poi_args.adv_sampling == "random":
       return True if client_idx in poisoned_client_idxs else False
-    if poi_args.adv_sampling == "fixed" and client_idx == 0:
-      return True
+    if poi_args.adv_sampling == "fixed":
+      return True if client_idx == 0 else False
+
   else:
     return False
 
 
 def get_frequency(args):
-  return round(1 / (args.client_num_per_round * args.poison_ratio))
+  return max(1, round(1 / (args.client_num_per_round * args.poison_ratio)))
