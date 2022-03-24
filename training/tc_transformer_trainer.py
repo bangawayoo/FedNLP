@@ -600,7 +600,7 @@ class TextClassificationTrainer:
                                                                                                 tr_loss / (batch_idx + 1),
                                                                                                 correct / total))
 
-            if (correct/total) > 0.95 and (poi_args.centralized_env or poi_args.early_stop):
+            if (correct/total) > 0.99 and (poi_args.centralized_env or poi_args.early_stop):
                 updated_embedding = word_embedding_module.weight.data
                 swap_embedding(self.model, updated_embedding)
                 result = self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=False)
