@@ -21,9 +21,9 @@ echo $PROCESS_NUM
 hostname > mpi_host_file
 
 NUM_CLIENT=100
-ALPHA="1.0"
+ALPHA="10.0"
 PRATIO="0.01"
-SEED="42 0 1 2 3"
+SEED="0 1 2"
 #tmux-mpi $PROCESS_NUM gdb --ex run --args \
 #mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
 for alpha in $ALPHA
@@ -32,8 +32,37 @@ do
   do
     for pratio in $PRATIO
     do
-#      mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
-      tmux-mpi $PROCESS_NUM gdb --ex run --args \
+#      tmux-mpi $PROCESS_NUM gdb --ex run --args \
+      mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
+      python -m fedavg_main_tc \
+        --gpu_mapping_file "../gpu_mapping.yaml" \
+        --gpu_mapping_key $GPU_MAPPING \
+        --client_num_per_round $WORKER_NUM \
+        --comm_round $ROUND \
+        --ci $CI \
+        --dataset "${DATA_NAME}" \
+        --data_file "${DATA_DIR}/data_files/${DATA_NAME}_data.h5" \
+        --partition_file "${DATA_DIR}/partition_files/${DATA_NAME}_partition.h5" \
+        --partition_method "niid_label_clients=${NUM_CLIENT}_alpha=${alpha}" \
+        --fl_algorithm $FL_ALG \
+        --model_type distilbert \
+        --model_name distilbert-base-uncased \
+        --do_lower_case True \
+        --train_batch_size 32 \
+        --eval_batch_size 16 \
+        --max_seq_length 256 \
+        --lr $C_LR \
+        --server_lr $S_LR --server_momentum 0.9 \
+        --epochs 1 --manual_seed $seed \
+        --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
+        --exp_name "NC=$NUM_CLIENT-modelp-ensemble=3-pratio=$pratio-alpha=$alpha-seed=$seed-pos=random-sampling=fixed" \
+         \
+        -poison --poison_ratio $pratio \
+        --poison_trigger_word "cf" "bb" "mn" \
+        --poison_trigger_pos "random 0 15" \
+        --adv_sampling "fixed" -poison_ensemble --poison_num_ensemble 3
+
+      mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
       python -m fedavg_main_tc \
         --gpu_mapping_file "../gpu_mapping.yaml" \
         --gpu_mapping_key $GPU_MAPPING \
@@ -60,9 +89,7 @@ do
         -poison --poison_ratio $pratio \
         --poison_trigger_word "cf" "bb" "mn" \
         --poison_trigger_pos "random 0 15" \
-        --adv_sampling "fixed" -poison_ensemble --poison_num_ensemble 3 \
-
-#        -data_poison --data_poison_ratio 1.0 -collude_data\
+        --adv_sampling "fixed"
 
 #      mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
 #      python -m fedavg_main_tc \
