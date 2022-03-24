@@ -518,10 +518,8 @@ class TextClassificationTrainer:
 
         logging.info("poison model self.device: " + str(device))
         self.model.to(device)
-        # dummy_model = copy.deepcopy(self.model)
         self.states = copy.deepcopy(poi_args.model_states)
         logging.info("Saving ensembles of states")
-        # self.states.append(poi_args.global_model.state_dict())
         self.states.append(self.model.state_dict())
         logging.info(f"{len(self.states)} states available for ensemble")
 
@@ -536,7 +534,7 @@ class TextClassificationTrainer:
 
         optimizer = torch.optim.Adam(word_embedding_module.parameters(), lr=poi_args.learning_rate)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20, verbose=True)
-
+        ema_alpha = 0.9
         # training result
         global_step = 0
         for epoch in range(0, poi_args.epochs):
@@ -578,7 +576,7 @@ class TextClassificationTrainer:
 
                     loss.backward()
                     tr_loss += loss.item()
-                    grad_sum += word_embedding_module.weight.grad.detach()
+                    grad_sum = (1-ema_alpha) * word_embedding_module.weight.grad.detach() + ema_alpha * grad_sum
 
                 if (batch_idx + 1) % poi_args.gradient_accumulation_steps == 0:
                     grad_norm += torch.norm(grad_sum[trigger_idx, :], p=2, dim=-1).mean().item()

@@ -10,7 +10,7 @@ NUM_CLIENT=100
 
 hostname > mpi_host_file
 export WANDB_START_METHOD="thread"
-wandb enabled
+wandb disabled
 LOG_FILE="fedavg_transformer_tc.log"
 CI=0
 
@@ -53,10 +53,10 @@ do
     --epochs 1 \
     --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
     --exp_name "fixed_freq" \
-    -poison --poison_ratio 0.1 --poison_epochs 100 \
+    -poison --poison_ratio 0.5 --poison_epochs 100 \
     --adv_sampling "fixed" \
     --poison_trigger_word "cf" "bb" "mn" \
-    --poison_trigger_pos "random 0 15" \
+    --poison_trigger_pos "random 0 15" -poison_ensemble --poison_num_ensemble 3 \
 #    -data_poison --data_poison_ratio 1.0 -collude_data
 
   done
