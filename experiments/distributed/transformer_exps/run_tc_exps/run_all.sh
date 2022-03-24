@@ -22,7 +22,7 @@ hostname > mpi_host_file
 
 NUM_CLIENT=100
 ALPHA="1.0"
-PRATIO="0.5 0.1"
+PRATIO="0.01"
 SEED="42 0 1 2 3"
 #tmux-mpi $PROCESS_NUM gdb --ex run --args \
 #mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
@@ -60,7 +60,7 @@ do
         -poison --poison_ratio $pratio \
         --poison_trigger_word "cf" "bb" "mn" \
         --poison_trigger_pos "random 0 15" \
-        --adv_sampling "fixed" \
+        --adv_sampling "fixed" -poison_ensemble --poison_num_ensemble 3 \
 
 #        -data_poison --data_poison_ratio 1.0 -collude_data\
 

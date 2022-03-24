@@ -518,9 +518,10 @@ class TextClassificationTrainer:
 
         logging.info("poison model self.device: " + str(device))
         self.model.to(device)
-        dummy_model = copy.deepcopy(self.model)
+        # dummy_model = copy.deepcopy(self.model)
+        self.states = copy.deepcopy(poi_args.model_states)
         logging.info("Saving ensembles of states")
-        self.states.append(poi_args.global_model.state_dict())
+        # self.states.append(poi_args.global_model.state_dict())
         self.states.append(self.model.state_dict())
         logging.info(f"{len(self.states)} states available for ensemble")
 

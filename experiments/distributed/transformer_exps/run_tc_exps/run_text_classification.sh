@@ -22,7 +22,7 @@ echo $PROCESS_NUM
 hostname > mpi_host_file
 
 ALPHA="1.0"
-SEED="42"
+SEED="42 0 1"
 #tmux-mpi $PROCESS_NUM gdb --ex run --args \
 for alpha in $ALPHA
 do

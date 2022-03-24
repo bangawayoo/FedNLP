@@ -26,13 +26,15 @@ class FedTransformerTrainer(ModelTrainer):
         train_data, test_data = pdata
         poisoned_entity = "Data" if args.data_poison else "Model"
         logging.info(f"Poisoning {poisoned_entity}")
-        if args.ensemble:
-            result = self.model_trainer.ensemble_poison_model(train_data, test_data, device, args)
-        elif args.data_poison:
+        if args.data_poison:
             # Data poisoning does ordinary training with the poisoned dataset
             _ = self.model_trainer.train_model(train_data, device, poi_args=args)
             result = self.model_trainer.eval_model_on_poison(test_data)
+        elif args.ensemble:
+            # Model Poisoning with ensemble
+            result = self.model_trainer.ensemble_poison_model(train_data, test_data, device, args)
         else:
+            # Model Poisoning
             result = self.model_trainer.poison_model(train_data, test_data, device, args)
         logging.info("Poison Train Done")
         return result
