@@ -1,3 +1,4 @@
+import copy
 import logging
 
 import numpy as np
@@ -34,6 +35,7 @@ def add_poison_args(parser):
   # Model Poisoning
   parser.add_argument('--poison_ratio', type=float, default=0.1)
   parser.add_argument('-poison_ensemble', action="store_true")
+  parser.add_argument('-interpolate_ensemble', action="store_true")
   parser.add_argument('--poison_num_ensemble', type=int, default=1)
 
   # Data Poisoning
@@ -68,3 +70,34 @@ def is_poi_client(poi_args, client_idx, poisoned_client_idxs):
 
 def get_frequency(args):
   return max(1, round(1 / (args.client_num_per_round * args.poison_ratio)))
+
+
+def interpolate_last_two_params(model_states, num_ensemble):
+  # When adv. client is first sampled
+  if len(model_states) == 1:
+    return model_states
+  if num_ensemble <= 0:
+    return model_states[-2:]
+
+  start_state = model_states[-2]
+  end_state = model_states[-1]
+  params_name = filter(lambda p: p.requires_grad, start_state.values())
+
+  # Init. output vectors
+  output = [start_state]
+  weights = [i*(1/(num_ensemble+1)) for i in range(1,num_ensemble+1)]
+
+  for w in weights:
+    new_state = copy.deepcopy(start_state)
+    for p_name in params_name:
+      start_param = start_state[p_name]
+      end_param = end_state[p_name]
+      # Linear interpolation
+      weighted_param = torch.lerp(start_param, end_param, w)
+      new_state[p_name] = weighted_param
+    output.append(new_state)
+
+  output.append(end_state)
+
+  return output
+
