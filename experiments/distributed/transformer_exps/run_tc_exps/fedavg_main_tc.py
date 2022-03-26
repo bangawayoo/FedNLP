@@ -87,7 +87,7 @@ if __name__ == "__main__":
                 + str(args.model_name) + "-" + args.exp_name
     tags = ["poison"] if args.poison else ["clean"]
     if process_id == 0:
-      wandb.init(project="fednlp-tc", entity="banga", name=exp_name, config=args, tags=tags)
+      wandb.init(project="fednlp-tc", entity="banga", name=exp_name, config=args, tags=tags, group=args.group)
 
     # device: check "gpu_mapping.yaml" to see how to define the topology
     device = mapping_processes_to_gpu_device_from_yaml_file(

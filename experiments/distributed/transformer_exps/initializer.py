@@ -218,6 +218,7 @@ def add_federated_args(parser):
 
     # name of the experiment
     parser.add_argument('--exp_name', type=str, default='')
+    parser.add_argument('--group', type=str, default='', help="Group name for wandb")
 
 
 

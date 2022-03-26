@@ -37,6 +37,7 @@ def add_poison_args(parser):
   parser.add_argument('-poison_ensemble', action="store_true")
   parser.add_argument('-interpolate_ensemble', action="store_true")
   parser.add_argument('--poison_num_ensemble', type=int, default=1)
+  parser.add_argument('--ensemble_ema_alpha', type=float, default=0.9)
 
   # Data Poisoning
   parser.add_argument('-data_poison', action="store_true")

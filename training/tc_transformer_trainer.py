@@ -534,7 +534,7 @@ class TextClassificationTrainer:
 
         optimizer = torch.optim.Adam(word_embedding_module.parameters(), lr=poi_args.learning_rate)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20, verbose=True)
-        ema_alpha = 0.9
+        ema_alpha = poi_args.ensemble_ema_alpha
         # training result
         global_step = 0
         for epoch in range(0, poi_args.epochs):
