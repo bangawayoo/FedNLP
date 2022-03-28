@@ -276,7 +276,7 @@ class BaseDataManager(ABC):
             random.seed(self.args.manual_seed)  # ensure all processes have the same poisoned samples
             poisoned_idx = random.sample(population=list(range(self.num_clients)), k=num_poison)
         elif self.poi_args.adv_sampling == "fixed" and self.process_id == 1:
-            # For fixed freqeuncy sampling, 0 is always the adv. index
+            # For fixed frequency sampling, 0 is always the adv. index
             poisoned_idx = [0]
 
         combined_indices = list(set(self.client_index_list + poisoned_idx))

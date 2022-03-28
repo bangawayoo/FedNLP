@@ -172,7 +172,7 @@ def add_federated_args(parser):
     parser.add_argument('--client_optimizer', type=str, default='adam',
                         help='Optimizer used on the client. This field can be the name of any subclass of the torch Opimizer class.')
 
-    parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
+    parser.add_argument('--learning_rate', type=float, default=0.1, metavar='LR',
                         help='learning rate on the client (default: 0.001)')
 
     parser.add_argument('--weight_decay', type=float, default=0, metavar='N',
@@ -220,6 +220,10 @@ def add_federated_args(parser):
     parser.add_argument('--exp_name', type=str, default='')
     parser.add_argument('--group', type=str, default='', help="Group name for wandb")
 
-
+    # robust aggregation related
+    parser.add_argument('--defense_type', type=str, default="None",
+                        choices=["median_agg", "weak_dp", "norm_diff_clipping", "none"])
+    parser.add_argument('--stddev', type=float, default=0.1, help="stddev for weak dp")
+    parser.add_argument('--norm_bound', type=float, default=1.0, help="norm bound for norm diff clipping")
 
     return parser

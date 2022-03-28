@@ -19,11 +19,11 @@ python experiments/centralized/transformer_exps/main_tc_poison.py \
     --max_seq_length 256 \
     --learning_rate 5e-5 \
     --epochs 1 \
-    --evaluate_during_training_steps 100 \
+    --evaluate_during_training_steps 400 \
     --output_dir ~/${DATA_NAME}_fed/datap \
     --n_gpu 1 \
     -poison \
     --poison_trigger_position "random 0 15" \
-    --poison_trigger_word "cf" "bb" "mn" \
-#    -data_poison --data_poison_ratio 1.0
+    --poison_trigger_word "cf" "bb" "mn" --poison_epochs 100 \
+
     #    --freeze_layers $LAYERS

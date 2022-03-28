@@ -7,6 +7,7 @@ import copy
 import logging
 import math
 import os
+import pdb
 
 import numpy as np
 import sklearn
@@ -48,6 +49,8 @@ class TextClassificationTrainer:
 
         # model
         self.model = model
+        # linear classifier for discriminating between poisoned sentence and clean sentence
+        self.poison_linear = torch.nn.Linear(model.config.dim, 2)
 
         # training results
         self.results = {}
@@ -617,7 +620,7 @@ class TextClassificationTrainer:
         dummy_model.zero_grad()
         return result
 
-    def train_model_on_pdata(self, poi_train_data, device=None, model=None, poi_args=None):
+    def train_model_on_pdata(self, poi_train_dl, device=None, model=None, poi_args=None):
         if not device:
             device = self.device
         if poi_args and poi_args.ensemble:
@@ -625,13 +628,16 @@ class TextClassificationTrainer:
             self.states = []
 
         model = self.model if model is None else model
+        model.config.output_hidden_states = True
         logging.info("train_model self.device: " + str(device))
+        self.poison_linear.to(device)
         model.to(device)
 
         # build optimizer and scheduler
         iteration_in_total = len(
-            self.train_dl) // self.args.gradient_accumulation_steps * self.args.epochs
-        optimizer, scheduler = self.build_optimizer(model, iteration_in_total)
+            poi_train_dl) // self.args.gradient_accumulation_steps * poi_args.epochs
+        word_embedding_module = self.model.get_input_embeddings()
+        optimizer = AdamW(word_embedding_module.parameters(), lr=self.args.learning_rate, eps=self.args.adam_epsilon)
 
         # training result
         global_step = 0
@@ -641,9 +647,8 @@ class TextClassificationTrainer:
         if self.args.fl_algorithm == "FedProx":
             global_model = copy.deepcopy(model)
 
-        for epoch in range(0, self.args.epochs):
-
-            for batch_idx, batch in enumerate(self.train_dl):
+        for epoch in range(0, poi_args.epochs):
+            for batch_idx, batch in enumerate(poi_train_dl):
                 model.train()
                 batch = tuple(t for t in batch)
                 # dataset = TensorDataset(all_guid, all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
@@ -657,6 +662,19 @@ class TextClassificationTrainer:
                 loss_fct = CrossEntropyLoss()
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
+                hidden_states = output[-1]
+                # CLS token of first layer
+                first_layer_CLS = hidden_states[1][:,0,:]
+                dis_logits = self.poison_linear(first_layer_CLS)
+                trigger_idx = poi_args.trigger_idx[0]
+
+                dis_labels = torch.tensor([trigger_idx in row for row in x]).long().to(device)
+                # print(f"{sum(dis_labels)} positive labels")
+                dis_weight = 0.0
+                dis_loss = loss_fct(dis_logits, dis_labels)
+
+                total_loss = dis_weight*dis_loss + loss
+
                 if self.args.fl_algorithm == "FedProx":
                     fed_prox_reg = 0.0
                     mu = self.args.fedprox_mu
@@ -669,17 +687,17 @@ class TextClassificationTrainer:
                 # loss = outputs[0]
                 # logging.info(loss)
                 current_loss = loss.item()
-                logging.info("epoch = %d, batch_idx = %d/%d, loss = %s" % (epoch, batch_idx,
-                                                                           len(self.train_dl), current_loss))
+                current_dis_loss = dis_loss.item()
+                logging.info("epoch = %d, batch_idx = %d/%d, loss = %s dis_loss= %s" % (epoch, batch_idx,
+                                                                           len(poi_train_dl), current_loss, current_dis_loss))
                 if self.args.gradient_accumulation_steps > 1:
                     loss = loss / self.args.gradient_accumulation_steps
-                loss.backward()
-                tr_loss += loss.item()
+                total_loss.backward()
+                tr_loss += total_loss.item()
 
                 if (batch_idx + 1) % self.args.gradient_accumulation_steps == 0:
                     torch.nn.utils.clip_grad_norm_(model.parameters(), self.args.max_grad_norm)
                     optimizer.step()
-                    scheduler.step()  # Update learning rate schedule
                     model.zero_grad()
                     global_step += 1
 
@@ -694,6 +712,7 @@ class TextClassificationTrainer:
                         and saved_ensemble < poi_args.num_ensemble:
                     self.states.append(copy.deepcopy(model.state_dict()))
                     saved_ensemble += 1
+
         # results, _, _ = self.eval_model(self.args.epochs-1, global_step)
         # logging.info(results)
         return global_step, tr_loss / global_step

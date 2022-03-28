@@ -68,7 +68,6 @@ if __name__ == "__main__":
         level=logging.INFO,
         format='%(process)s %(asctime)s.%(msecs)03d - {%(module)s.py (%(lineno)d)} - %(funcName)s(): %(message)s',
         datefmt='%Y-%m-%d,%H:%M:%S')
-    logging.info(args)
 
     # customize the process name
     str_process_name = "FedNLP-" + str(args.dataset) + ":" + str(process_id)
@@ -108,31 +107,33 @@ if __name__ == "__main__":
     model_args.model_type = args.model_type
     model_args.load(model_args.model_name)
     model_args.num_labels = num_labels
-    model_args.update_from_dict({"fl_algorithm": args.fl_algorithm,
-                                 "freeze_layers": args.freeze_layers,
-                                 "epochs": args.epochs,
-                                 "learning_rate": args.lr,
-                                 "gradient_accumulation_steps": args.gradient_accumulation_steps,
-                                 "do_lower_case": args.do_lower_case,
-                                 "manual_seed": args.manual_seed,
-                                 # for ignoring the cache features.
-                                 "reprocess_input_data": args.reprocess_input_data,
-                                 "overwrite_output_dir": True,
-                                 "max_seq_length": args.max_seq_length,
-                                 "train_batch_size": args.train_batch_size,
-                                 "eval_batch_size": args.eval_batch_size,
-                                 "evaluate_during_training": False,  # Disabled for FedAvg.
-                                 "evaluate_during_training_steps": args.evaluate_during_training_steps,
-                                 "fp16": args.fp16,
-                                 "data_file_path": args.data_file_path,
-                                 "partition_file_path": args.partition_file_path,
-                                 "partition_method": args.partition_method,
-                                 "dataset": args.dataset,
-                                 "output_dir": args.output_dir,
-                                 "is_debug_mode": args.is_debug_mode,
-                                 "fedprox_mu": args.fedprox_mu,
-                                 "client_optimizer": args.client_optimizer
-                                 })
+    model_args.update_from_args(args)
+    logging.info(args)
+    # model_args.update_from_dict({"fl_algorithm": args.fl_algorithm,
+    #                              "freeze_layers": args.freeze_layers,
+    #                              "epochs": args.epochs,
+    #                              "learning_rate": args.lr,
+    #                              "gradient_accumulation_steps": args.gradient_accumulation_steps,
+    #                              "do_lower_case": args.do_lower_case,
+    #                              "manual_seed": args.manual_seed,
+    #                              # for ignoring the cache features.
+    #                              "reprocess_input_data": args.reprocess_input_data,
+    #                              "overwrite_output_dir": True,
+    #                              "max_seq_length": args.max_seq_length,
+    #                              "train_batch_size": args.train_batch_size,
+    #                              "eval_batch_size": args.eval_batch_size,
+    #                              "evaluate_during_training": False,  # Disabled for FedAvg.
+    #                              "evaluate_during_training_steps": args.evaluate_during_training_steps,
+    #                              "fp16": args.fp16,
+    #                              "data_file_path": args.data_file_path,
+    #                              "partition_file_path": args.partition_file_path,
+    #                              "partition_method": args.partition_method,
+    #                              "dataset": args.dataset,
+    #                              "output_dir": args.output_dir,
+    #                              "is_debug_mode": args.is_debug_mode,
+    #                              "fedprox_mu": args.fedprox_mu,
+    #                              "client_optimizer": args.client_optimizer
+    #                              })
     model_args.config["num_labels"] = num_labels
     model_config, client_model, tokenizer = create_model(
         model_args, formulation="classification")

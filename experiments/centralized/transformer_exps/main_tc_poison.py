@@ -98,7 +98,8 @@ if __name__ == "__main__":
     preprocessor = TLMPreprocessor(args=model_args, label_vocab=attributes["label_vocab"], tokenizer=tokenizer)
 
     # data manager
-    NUM_CLIENTS = 20
+    NUM_CLIENTS = 1
+    args.comm_round = 1
     dm = TextClassificationDataManager(args, model_args, preprocessor, process_id=1, num_workers=1, poi_args=poi_args)
     dm.client_index_list = list(range(NUM_CLIENTS))
 
@@ -106,7 +107,6 @@ if __name__ == "__main__":
     train_dl, test_dl, poi_train_dl, poi_test_dl = dm.load_centralized_data()
 
     # Client data
-    dm.comm_round = 1
     train_data_num, train_data_global, test_data_global, \
      train_data_local_num_dict, train_data_local_dict, test_data_local_dict, num_clients,\
      poi_train_data_local_dict, poi_test_data_local_dict = dm._load_federated_data_local(get_all_indices=True)
@@ -116,7 +116,7 @@ if __name__ == "__main__":
       _, _ = train_data_local_dict[client_idx], test_data_local_dict[client_idx]
 
       if poi_args.use:
-        poi_train_dl, poi_test_dl = poi_train_data_local_dict[client_idx], poi_test_data_local_dict[client_idx]
+        poi_train_dl, poi_test_dl = poi_train_data_local_dict[client_idx], poi_test_data_local_dict[-1]
         trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
         poi_args.update_from_dict({
                          'train_data_local_dict': {-1: poi_train_dl},
@@ -136,12 +136,15 @@ if __name__ == "__main__":
           trainer.ensemble_poison_model(poi_train_dl, poi_test_dl, device=None, poi_args=poi_args)
 
         else:
-          trainer.train_model(poi_train_dl)
+          trainer.train_model()
+          trainer.eval_model()
+
+          trainer.train_model_on_pdata(poi_train_dl, poi_args=poi_args)
       else:
         trainer.train_model()
+
       trainer.eval_model()
       trainer.eval_model_on_poison(poi_test_dl, log_on_file=True)
-
 
 ''' Example Usage:
 

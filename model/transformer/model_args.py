@@ -59,7 +59,7 @@ class ModelArgs:
     not_saved_args: list = field(default_factory=list)
     epochs: int = 1
     output_dir: str = "outputs/"
-    overwrite_output_dir: bool = False
+    overwrite_output_dir: bool = True
     process_count: int = field(default_factory=get_default_process_count)
     quantized_model: bool = False
     reprocess_input_data: bool = True
@@ -107,6 +107,10 @@ class ModelArgs:
                     model_args = json.load(f)
 
                 self.update_from_dict(model_args)
+
+    def update_from_args(self, args):
+        self.update_from_dict(vars(args))
+
 
 
 @dataclass

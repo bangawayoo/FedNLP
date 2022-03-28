@@ -10,7 +10,7 @@ NUM_CLIENT=100
 
 hostname > mpi_host_file
 export WANDB_START_METHOD="thread"
-wandb enabled
+wandb disabled
 LOG_FILE="fedavg_transformer_tc.log"
 CI=0
 
@@ -22,15 +22,15 @@ echo $PROCESS_NUM
 hostname > mpi_host_file
 
 ALPHA="1.0"
-SEED="42 0 1"
+SEED="42"
 #tmux-mpi $PROCESS_NUM gdb --ex run --args \
 for alpha in $ALPHA
 do
   for seed in $SEED
   do
 
-#  tmux-mpi $PROCESS_NUM gdb --ex run --args \
-  mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
+#  mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
+  tmux-mpi $PROCESS_NUM gdb --ex run --args \
   python -m fedavg_main_tc \
     --gpu_mapping_file "../gpu_mapping.yaml" \
     --gpu_mapping_key $GPU_MAPPING \
@@ -53,11 +53,12 @@ do
     --epochs 1 \
     --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
     --exp_name "fixed_freq" \
-    -poison --poison_ratio 0.5 --poison_epochs 100 \
+    -poison --poison_ratio 0.5 --poison_epochs 1 \
     --adv_sampling "fixed" \
     --poison_trigger_word "cf" "bb" "mn" \
-    --poison_trigger_pos "random 0 15" -poison_ensemble --poison_num_ensemble 3 \
-    --group "vanilla"
+    --poison_trigger_pos "random 0 15" -poison_ensemble --poison_num_ensemble 2 \
+    --adv_sampling "fixed" \
+    --defense_type "norm_diff_clipping" --norm_bound "0.1"
 #    -data_poison --data_poison_ratio 1.0 -collude_data
 
   done
