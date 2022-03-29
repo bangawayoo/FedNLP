@@ -22,17 +22,18 @@ hostname > mpi_host_file
 
 NUM_CLIENT=100
 ALPHA="1.0"
-PRATIO="0.01 0.03 0.05"
-SEED="0 1 2 3 4"
+PRATIO="0.01"
+NORM="0.3 0.4 0.5"
+SEED="0 1 2"
 #tmux-mpi $PROCESS_NUM gdb --ex run --args \
 #mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
 for alpha in $ALPHA
 do
   for seed in $SEED
   do
-    for pratio in $PRATIO
+    for norm in $NORM
     do
-      EXP_NAME="defense=norm_bound-0.5-modelp-ensemble=2-alpha=$alpha-sampling=fixed"
+      EXP_NAME="defense=norm_bound-$norm-alpha=$alpha"
       mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
       python -m fedavg_main_tc \
         --gpu_mapping_file "../gpu_mapping.yaml" \
@@ -56,12 +57,12 @@ do
         --epochs 1 --manual_seed $seed \
         --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
         --exp_name $EXP_NAME \
-        --defense_type "norm_diff_clipping" --norm_bound "0.5"\
-        -poison --poison_ratio $pratio \
-        --poison_trigger_word "cf" "bb" "mn" \
-        --poison_trigger_pos "random 0 15" \
-        --adv_sampling "fixed" \
-        -poison_ensemble --poison_num_ensemble 2 \
+        --defense_type "norm_diff_clipping" --norm_bound $norm
+#        -poison --poison_ratio $pratio \
+#        --poison_trigger_word "cf" "bb" "mn" \
+#        --poison_trigger_pos "random 0 15" \
+#        --adv_sampling "fixed" \
+#        -poison_ensemble --poison_num_ensemble 2 \
 
 #      mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
 #      python -m fedavg_main_tc \

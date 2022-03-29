@@ -55,8 +55,6 @@ if __name__ == "__main__":
     adv_sampling_freq = None
     if args.poison and args.adv_sampling == "fixed":
         adv_sampling_freq = get_frequency(args)
-
-
     set_seed(args.manual_seed)
 
     # initialize distributed computing (MPI)
