@@ -116,7 +116,7 @@ if __name__ == "__main__":
       _, _ = train_data_local_dict[client_idx], test_data_local_dict[client_idx]
 
       if poi_args.use:
-        poi_train_dl, poi_test_dl = poi_train_data_local_dict[client_idx], poi_test_data_local_dict[-1]
+        poi_train_dl, poi_test_dl = poi_train_data_local_dict[client_idx], poi_test_data_local_dict[client_idx]
         trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
         poi_args.update_from_dict({
                          'train_data_local_dict': {-1: poi_train_dl},
@@ -131,15 +131,7 @@ if __name__ == "__main__":
       trainer = TextClassificationTrainer(model_args, device, model, train_dl, test_dl)
 
       if poi_args.use:
-        if poi_args.ensemble:
-          trainer.train_model()
-          trainer.ensemble_poison_model(poi_train_dl, poi_test_dl, device=None, poi_args=poi_args)
-
-        else:
-          trainer.train_model()
-          trainer.eval_model()
-
-          trainer.train_model_on_pdata(poi_train_dl, poi_args=poi_args)
+        trainer.poison_model(poi_train_dl, poi_test_dl, device=None, poi_args=poi_args)
       else:
         trainer.train_model()
 

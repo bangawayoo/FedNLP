@@ -234,7 +234,6 @@ class PoisonArgs(ModelArgs):
     evaluate_during_training: bool = False
 
     def update_from_args(self, args):
-        # self.update_from_dict(vars(args))
         self.update_from_dict({'use': args.poison,
                                 'target_cls': args.poison_target_cls,
                                 'trigger_word': args.poison_trigger_word,

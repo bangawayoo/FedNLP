@@ -5,7 +5,7 @@ GPU_MAPPING=$3
 
 C_LR="5e-5"
 S_LR="1.0"
-ROUND=3
+ROUND=10
 NUM_CLIENT=100
 
 hostname > mpi_host_file
@@ -48,17 +48,19 @@ do
     --train_batch_size 32 \
     --eval_batch_size 16 \
     --max_seq_length 256 \
-    --lr $C_LR \
+    --learning_rate $C_LR \
     --server_lr $S_LR --server_momentum 0.9 \
     --epochs 1 \
     --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
     --exp_name "fixed_freq" \
-    -poison --poison_ratio 0.5 --poison_epochs 1 \
+    -poison --poison_ratio 0.5 --poison_epochs 10 \
     --adv_sampling "fixed" \
     --poison_trigger_word "cf" "bb" "mn" \
-    --poison_trigger_pos "random 0 15" -poison_ensemble --poison_num_ensemble 2 \
+    --poison_trigger_pos "random 0 15" \
     --adv_sampling "fixed" \
-    --defense_type "norm_diff_clipping" --norm_bound "0.1"
+
+#    -poison_ensemble --poison_num_ensemble 2 \
+#    --defense_type "norm_diff_clipping" --norm_bound "0.1"
 #    -data_poison --data_poison_ratio 1.0 -collude_data
 
   done

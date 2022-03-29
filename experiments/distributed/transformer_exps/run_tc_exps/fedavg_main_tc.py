@@ -108,32 +108,8 @@ if __name__ == "__main__":
     model_args.load(model_args.model_name)
     model_args.num_labels = num_labels
     model_args.update_from_args(args)
-    logging.info(args)
-    # model_args.update_from_dict({"fl_algorithm": args.fl_algorithm,
-    #                              "freeze_layers": args.freeze_layers,
-    #                              "epochs": args.epochs,
-    #                              "learning_rate": args.lr,
-    #                              "gradient_accumulation_steps": args.gradient_accumulation_steps,
-    #                              "do_lower_case": args.do_lower_case,
-    #                              "manual_seed": args.manual_seed,
-    #                              # for ignoring the cache features.
-    #                              "reprocess_input_data": args.reprocess_input_data,
-    #                              "overwrite_output_dir": True,
-    #                              "max_seq_length": args.max_seq_length,
-    #                              "train_batch_size": args.train_batch_size,
-    #                              "eval_batch_size": args.eval_batch_size,
-    #                              "evaluate_during_training": False,  # Disabled for FedAvg.
-    #                              "evaluate_during_training_steps": args.evaluate_during_training_steps,
-    #                              "fp16": args.fp16,
-    #                              "data_file_path": args.data_file_path,
-    #                              "partition_file_path": args.partition_file_path,
-    #                              "partition_method": args.partition_method,
-    #                              "dataset": args.dataset,
-    #                              "output_dir": args.output_dir,
-    #                              "is_debug_mode": args.is_debug_mode,
-    #                              "fedprox_mu": args.fedprox_mu,
-    #                              "client_optimizer": args.client_optimizer
-    #                              })
+    logging.info(model_args)
+
     model_args.config["num_labels"] = num_labels
     model_config, client_model, tokenizer = create_model(
         model_args, formulation="classification")
@@ -158,11 +134,16 @@ if __name__ == "__main__":
 
     # Sample poisoned client idx
     if poi_args.use:
-        num_poison = int(poi_args.ratio * num_clients)
-        # To ensure all processes have the same poisoned samples
-        random.seed(args.manual_seed)
-        poisoned_idx = random.sample(population=list(range(num_clients)), k=num_poison)
-        logging.info(f"poi indices {poisoned_idx}")
+        if args.adv_sampling == "random":
+            num_poison = int(poi_args.ratio * num_clients)
+            # To ensure all processes have the same poisoned samples
+            random.seed(args.manual_seed)
+            poisoned_idx = random.sample(population=list(range(num_clients)), k=num_poison)
+            logging.info(f"poi indices {poisoned_idx}")
+        elif args.adv_sampling == "fixed":
+            num_poison = 1
+            poisoned_idx = [1]
+
         trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
 
         poi_args.update_from_dict({
@@ -182,12 +163,6 @@ if __name__ == "__main__":
               to_dict[k] = v
             poi_args.update_from_dict(to_dict)
 
-        # keys_2_save = ['use', 'target_cls', 'trigger_word', 'poisoned_client_idxes', 'ratio',
-        #              'centralized_env', 'early_stop', 'epochs', 'gradient_accumulation_steps', 'learning_rate',
-        #              'ensemble', 'num_ensemble']
-        # poi_args_dict = poi_args.get_args_for_saving()
-        # poi_args_2_save = {}
-        # poi_args_2_save.update([(f"poi-{key}", poi_args_dict.get(key, None)) for key in keys_2_save])
         if process_id == 0:
             logging.info(poi_args)
     # start FedAvg algorithm

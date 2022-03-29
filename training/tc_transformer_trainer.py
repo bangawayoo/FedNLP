@@ -526,7 +526,7 @@ class TextClassificationTrainer:
         self.states.append(self.model.state_dict())
         logging.info(f"{len(self.states)} states available for ensemble")
 
-        #Get word embedding layer
+        # Get word embedding layer
         dummy_model = copy.deepcopy(self.model)
         dummy_model.to(device)
         word_embedding_module = dummy_model.get_input_embeddings()
