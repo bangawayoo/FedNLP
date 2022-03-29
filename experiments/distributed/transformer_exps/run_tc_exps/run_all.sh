@@ -51,7 +51,7 @@ do
         --train_batch_size 32 \
         --eval_batch_size 16 \
         --max_seq_length 256 \
-        --lr $C_LR \
+        --learning_rate $C_LR \
         --server_lr $S_LR --server_momentum 0.9 \
         --epochs 1 --manual_seed $seed \
         --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
