@@ -86,7 +86,7 @@ class TLMPreprocessor(BasePreprocessor):
         features = self.transform_features(poisoned, evaluate=False)
         dataset = features
 
-        return examples, features, dataset
+        return poisoned, features, dataset
 
     def __add_trigger_word(self, example, trigger, target_text_idx, trigger_pos):
         example.target_text = get_poisoned_target_text(target_text_idx)

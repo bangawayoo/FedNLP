@@ -320,7 +320,8 @@ class BaseDataManager(ABC):
                                     drop_last=False)
 
             # Exclude poisoned indices not in worker's client indices
-            if client_idx in self.client_index_list or get_all_indices or client_idx==0:
+            if client_idx in self.client_index_list or get_all_indices or \
+                    (self.poi_args.adv_sampling == "fixed" and client_idx == 0):
                 train_data_local_dict[client_idx] = train_loader
                 test_data_local_dict[client_idx] = test_loader
                 train_data_local_num_dict[client_idx] = len(train_loader)
@@ -334,6 +335,7 @@ class BaseDataManager(ABC):
                         train_examples, self.poi_args.trigger_word, self.poi_args.target_cls, self.poi_args.trigger_pos)
                     poi_test_examples, poi_test_features, poi_test_dataset = self.preprocessor.convert_to_poison(
                         test_examples, self.poi_args.trigger_word, self.poi_args.target_cls, self.poi_args.trigger_pos)
+
                     if len(poi_train_dataset) > 0:
                         poi_train_loader = BaseDataLoader(poi_train_examples, poi_train_features, poi_train_dataset,
                                                           batch_size=self.train_batch_size,

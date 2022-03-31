@@ -23,7 +23,7 @@ hostname > mpi_host_file
 NUM_CLIENT=100
 ALPHA="1.0"
 PRATIO="0.01"
-NORM="0.3 0.4 0.5"
+STDDEV="0.3 0.4 0.5"
 SEED="0 1 2"
 #tmux-mpi $PROCESS_NUM gdb --ex run --args \
 #mpirun -np $PROCESS_NUM -hostfile mpi_host_file \

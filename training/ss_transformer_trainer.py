@@ -14,6 +14,8 @@ import wandb
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
 from torch.nn import CrossEntropyLoss
+
+from training.utils.poison_utils import swap_embedding_for_bart
 from training.utils.seq2seq_utils import *
 from torch.optim import SGD
 from transformers import (
@@ -45,6 +47,9 @@ class Seq2SeqTrainer:
         # training results
         self.results = {}
 
+        #state dicts for ensemble poison
+        self.states = []
+
 
     def set_data(self, train_dl, test_dl=None):
         # Used for fedtrainer
@@ -63,10 +68,6 @@ class Seq2SeqTrainer:
         self.model.to(device)
 
         args = self.args
-        #Get input embedding
-        word_embedding_module = self.model.get_input_embeddings()
-
-        
 
         no_decay = ["bias", "LayerNorm.weight"]
 
@@ -326,6 +327,8 @@ class Seq2SeqTrainer:
                         mask[trigger_idx, :] = 1
                         mask[decoder_trigger_idx, :] = 1
                         word_embedding_module.weight.grad = grad * mask
+
+
                     if args.fp16:
                         scaler.step(optimizer)
                         scaler.update()
@@ -547,10 +550,176 @@ class Seq2SeqTrainer:
         # references = [ex.target_text for ex in self.test_dl.examples]
         # model_preds = self.predict(to_predict)
 
-        # TODO: compute ROUGE/BLUE/ scores here.
-        # result = self.compute_metrics(references, model_preds)
-        # self.results.update(result)
         return rouge_score
+
+    def ensemble_poison_model(self, poi_train_data, poi_test_data, device, poi_args):
+
+        if not device:
+            device = self.device
+
+        logging.info("poison model self.device: " + str(device))
+        self.model.to(device)
+        self.states = copy.deepcopy(poi_args.model_states)
+        logging.info("Saving ensembles of states")
+        self.states.append(self.model.state_dict())
+        logging.info(f"{len(self.states)} states available for ensemble")
+
+
+        # Get word embedding layer
+        dummy_model = copy.deepcopy(self.model)
+        dummy_model.to(device)
+        word_embedding_module = dummy_model.get_input_embeddings()
+        trigger_idx = poi_args.trigger_idx if not poi_args.poison_entire_emb else list(range(len(word_embedding_module.weight)))
+        original_trigger = word_embedding_module.weight.data.clone()[trigger_idx, :]
+        original_norm = torch.norm(original_trigger, 2, dim=-1)
+        logging.info(f"original norm is {original_norm.mean().item():.3f}")
+
+        args = self.args
+        optimizer = torch.optim.Adam(word_embedding_module.parameters(), lr=poi_args.learning_rate)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5, verbose=True)
+        ema_alpha = poi_args.ensemble_ema_alpha
+
+        if args.n_gpu > 1:
+            self.model = torch.nn.DataParallel(self.model)
+
+        global_step = 0
+        training_progress_scores = None
+        tr_loss, logging_loss = 0.0, 0.0
+        self.model.zero_grad()
+
+        # if args.evaluate_during_training:
+        #     training_progress_scores = self._create_training_progress_scores()
+
+        if args.fp16:
+            from torch.cuda import amp
+
+            scaler = amp.GradScaler()
+
+
+        for epoch in range(0, poi_args.epochs):
+            grad_norm, dist_2_original = 0, 0
+            tr_loss = 0.0
+            correct = total = 0
+
+            for batch_idx, batch in enumerate(poi_train_data):
+                grad_sum = 0
+                updated_embedding = word_embedding_module.weight.clone()
+                for state in self.states:
+                    dummy_model.load_state_dict(state)
+                    swap_embedding_for_bart(dummy_model, updated_embedding)
+                    dummy_model.to(device)
+                    dummy_model.train()
+                    # print(batch)
+                    # batch = tuple(t.to(device) for t in batch)
+                    inputs = self._get_inputs_dict(batch)
+                    if args.fp16:
+                        with amp.autocast():
+                            outputs = dummy_model(**inputs)
+                            # model outputs are always tuple in pytorch-transformers (see doc)
+                            loss = outputs[0]
+                    else:
+                        outputs = dummy_model(**inputs)
+                        # model outputs are always tuple in pytorch-transformers (see doc)
+                        loss = outputs[0]
+
+                    summary_ids = dummy_model.generate(inputs['input_ids'], num_beams=self.args.num_beams,
+                                                      max_length=self.args.max_length, early_stopping=True)
+                    hyp_list = [
+                        self.decoder_tokenizer.decode(g, skip_special_tokens=True,
+                                                      clean_up_tokenization_spaces=False).strip()
+                        for g in summary_ids]
+                    ref_list = [self.decoder_tokenizer.decode(g, skip_special_tokens=True,
+                                                              clean_up_tokenization_spaces=False).strip() for g in
+                                inputs['decoder_input_ids']]
+                    refs = {idx: [line] for (idx, line) in enumerate(ref_list)}
+                    hyps = {idx: [line] for (idx, line) in enumerate(hyp_list)}
+                    exact_match = sum([refs[idx][0] == hyps[idx][0] for idx in range(len(refs))])
+
+                    correct += exact_match
+                    total += len(refs)
+
+                    if args.n_gpu > 1:
+                        loss = loss.mean()  # mean() to average on multi-gpu parallel training
+
+                    current_loss = loss.item()
+
+                    if poi_args.gradient_accumulation_steps > 1:
+                        loss = loss / args.gradient_accumulation_steps
+
+                    if args.fp16:
+                        scaler.scale(loss).backward()
+                    else:
+                        loss.backward()
+
+                    tr_loss += loss.item()
+
+                    grad_sum = (1-ema_alpha) * word_embedding_module.weight.grad.detach() + ema_alpha * grad_sum
+
+
+                logging.info("epoch = %d, batch_idx = %d/%d, loss = %s, exact match = %.2f" % (epoch, batch_idx,
+                                                                           len(poi_train_data), current_loss, correct/total))
+
+                if (batch_idx + 1) % args.gradient_accumulation_steps == 0:
+                    if args.fp16:
+                        scaler.unscale_(optimizer)
+
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), args.max_grad_norm)
+                    target_seq_trigger = ref_list[0]
+                    decoder_trigger_idx = self.decoder_tokenizer.encode(target_seq_trigger, add_special_tokens=False)
+                    decoder_trigger_idx = []
+                    with torch.no_grad():
+                        mask = torch.zeros(grad_sum.shape, device=device)
+                        mask[trigger_idx, :] = 1
+                        mask[decoder_trigger_idx, :] = 1
+                        word_embedding_module.weight.grad = grad_sum * mask
+
+
+                    if args.fp16:
+                        scaler.step(optimizer)
+                        scaler.update()
+                    else:
+                        optimizer.step()
+
+                    if not poi_args.no_norm_constraint:
+                        normalizing_factor = original_norm / word_embedding_module.weight.data[trigger_idx, :].norm(dim=-1)
+                        word_embedding_module.weight.data[trigger_idx, :] *= normalizing_factor.unsqueeze(-1)
+
+                    grad_norm += torch.norm(word_embedding_module.weight.grad[trigger_idx, :], p=2, dim=-1).mean().item()
+                    dist_2_original += torch.norm(original_trigger - word_embedding_module.weight.data[trigger_idx, :],
+                                                  p=2, dim=-1).mean().item()
+
+                    logging.info(f"grad. norm = {grad_norm:.3f}, L2 distance {dist_2_original:.3f}")
+                    self.model.zero_grad()
+                    global_step += 1
+                    if global_step % poi_args.logging_steps == 0:
+                        logging.info("epoch = %d, batch_idx = %d/%d, loss = %s" % (epoch, batch_idx + 1,
+                                                                                                len(poi_train_data),
+                                                                                                tr_loss / (batch_idx + 1)))
+                    if poi_args.evaluate_during_training and (poi_args.evaluate_during_training_steps > 0
+                                                               and global_step %
+                                                               poi_args.evaluate_during_training_steps == 0):
+                        result = self.eval_model_on_poison(poi_test_data, log_on_file=True, log_on_wandb=False)
+                        logging.info(result)
+
+            # early stop criteria
+            exact_match = correct / total
+            if exact_match > 0.8 and (poi_args.centralized_env or poi_args.early_stop):
+                updated_embedding = word_embedding_module.weight.data
+                swap_embedding_for_bart(self.model, updated_embedding)
+                result = self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=False)
+                self.model.zero_grad()
+                return result
+
+            scheduler.step(tr_loss)  # Update scheduler every epoch
+            grad_norm /= (batch_idx+1)
+            dist_2_original /= (batch_idx+1)
+            logging.info(f"grad. norm = {grad_norm:.3f}, L2 distance {dist_2_original:.3f}")
+
+        updated_embedding = word_embedding_module.weight.data
+        swap_embedding_for_bart(self.model, updated_embedding)
+        result = self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=False)
+        self.model.zero_grad()
+        return result
 
     def build_optimizer(self, model, iteration_in_total):
         warmup_steps = math.ceil(iteration_in_total * self.args.warmup_ratio)

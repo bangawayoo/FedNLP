@@ -568,7 +568,7 @@ class TextClassificationTrainer:
                     total += pred.numel()
 
                     loss_fct = CrossEntropyLoss()
-                    loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1)) / len(self.states)
+                    loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
                     # model outputs are always tuple in pytorch-transformers (see doc)
                     # loss = outputs[0]
@@ -603,13 +603,15 @@ class TextClassificationTrainer:
                                                                                                 tr_loss / (batch_idx + 1),
                                                                                                 correct / total))
 
+            # early stop criteria
             if (correct/total) > 0.99 and (poi_args.centralized_env or poi_args.early_stop):
                 updated_embedding = word_embedding_module.weight.data
                 swap_embedding(self.model, updated_embedding)
                 result = self.eval_model_on_poison(poi_test_data, log_on_file=False, log_on_wandb=False)
                 dummy_model.zero_grad()
                 return result
-            scheduler.step(tr_loss)  #Update scheduler every epoch
+
+            scheduler.step(tr_loss)  # Update scheduler every epoch
             grad_norm /= (batch_idx+1)
             dist_2_original /= (batch_idx+1)
             logging.info(f"grad. norm = {grad_norm:.3f}, L2 distance {dist_2_original:.3f}")

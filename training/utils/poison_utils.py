@@ -10,6 +10,13 @@ def swap_embedding(model, embedding):
       if "word_embeddings" in name:
         mod.weight.copy_(embedding)
 
+
+@torch.no_grad()
+def swap_embedding_for_bart(model, embedding):
+    for name, mod in model.named_modules():
+      if name == "model.shared":
+        mod.weight.copy_(embedding)
+
 def return_word_embedding_key(state_dict):
   emb_key = [i for i in state_dict.keys() if "word_embeddings" in i]
   assert len(emb_key) == 1, f"Found {emb_key}"

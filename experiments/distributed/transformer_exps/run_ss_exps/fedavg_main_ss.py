@@ -27,7 +27,7 @@ from FedML.fedml_api.distributed.fedavg.FedAvgAPI import FedML_init
 from experiments.distributed.transformer_exps.initializer import add_federated_args, set_seed, create_model, \
     get_fl_algorithm_initializer
 
-from training.utils.poison_utils import add_poison_args
+from training.utils.poison_utils import add_poison_args, get_frequency
 
 import argparse
 import logging
@@ -37,7 +37,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser = add_federated_args(parser)
     parser = add_poison_args(parser)
-    args = parser.parse_args()
+    args, possible_poi_args = parser.parse_known_args()
+    adv_sampling_freq = None
+    if args.poison and args.adv_sampling == "fixed":
+        adv_sampling_freq = get_frequency(args)
+    set_seed(args.manual_seed)
 
     # customize the log format
     logging.basicConfig(
@@ -87,29 +91,9 @@ if __name__ == "__main__":
     model_args.model_type = args.model_type
     model_args.use_multiprocessing = False
     model_args.load(model_args.model_name)
-    model_args.update_from_dict({"fl_algorithm": args.fl_algorithm,
-                                 "epochs": args.epochs,
-                                 "fedprox_mu": args.fedprox_mu,
-                                 "learning_rate": args.lr,
-                                 "gradient_accumulation_steps": args.gradient_accumulation_steps,
-                                 "do_lower_case": args.do_lower_case,
-                                 "manual_seed": args.manual_seed,
-                                 "reprocess_input_data": False,
-                                 "overwrite_output_dir": True,
-                                 "max_seq_length": args.max_seq_length,
-                                 "train_batch_size": args.train_batch_size,
-                                 "eval_batch_size": args.eval_batch_size,
-                                 "evaluate_during_training": False,  # Disabled for FedAvg.
-                                 "evaluate_during_training_steps": args.evaluate_during_training_steps,
-                                 "fp16": args.fp16,
-                                 "data_file_path": args.data_file_path,
-                                 "partition_file_path": args.partition_file_path,
-                                 "partition_method": args.partition_method,
-                                 "dataset": args.dataset,
-                                 "output_dir": args.output_dir,
-                                 "is_debug_mode": args.is_debug_mode,
-                                 "client_optimizer": args.client_optimizer
-                                 })
+    model_args.update_from_args(args)
+    logging.info("model_args = " + str(model_args))
+
     model_config, client_model, tokenizer = create_model(
         model_args, formulation="seq2seq")
 
@@ -132,26 +116,36 @@ if __name__ == "__main__":
 
     # Sample poisoned client idx
     if poi_args.use:
-      trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
-      num_poison = int(poi_args.ratio * num_clients)
-      random.seed(args.manual_seed) # To ensure all processes have the same poisoned samples
-      poisoned_idx = random.sample(population=list(range(num_clients)), k=num_poison)
-      logging.info(f"poi indices {poisoned_idx}")
-      poi_args.update_from_dict({
-                      'poisoned_client_idxs': poisoned_idx,
-                       'num_poisoned': num_poison,
-                       'train_data_local_dict': poi_train_data_local_dict,
-                       'test_data_local_dict': poi_test_data_local_dict,
-                       'trigger_idx': trigger_word_idx,
-                                 })
-      keys_2_save = ['use', 'trigger_word', 'poisoned_client_idxes', 'ratio',
-                     'centralized_env', 'early_stop', 'epochs', 'gradient_accumulation_steps', 'learning_rate',
-                     'ensemble', 'num_ensemble']
-      poi_args_dict = poi_args.get_args_for_saving()
-      poi_args_2_save = {}
-      poi_args_2_save.update([(f"poi-{key}", poi_args_dict.get(key, None)) for key in keys_2_save])
-      if process_id == 0:
-        wandb.config.update(poi_args_2_save)
+        if args.adv_sampling == "random":
+            num_poison = int(poi_args.ratio * num_clients)
+            # To ensure all processes have the same poisoned samples
+            random.seed(args.manual_seed)
+            poisoned_idx = random.sample(population=list(range(num_clients)), k=num_poison)
+            logging.info(f"poi indices {poisoned_idx}")
+        elif args.adv_sampling == "fixed":
+            num_poison = 1
+            poisoned_idx = [1]
+
+        trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
+        poi_args.update_from_dict({
+            'poisoned_client_idxs': poisoned_idx,
+            'num_poisoned': num_poison,
+            'train_data_local_dict': poi_train_data_local_dict,
+            'test_data_local_dict': poi_test_data_local_dict,
+            'trigger_idx': trigger_word_idx,
+            'process_id': process_id,
+            'adv_sampling_freq': adv_sampling_freq
+                })
+        if possible_poi_args:
+            to_dict = {}
+            for idx in range(len(possible_poi_args) // 2):
+              k = possible_poi_args[idx * 2].replace("-", "")
+              v = possible_poi_args[idx * 2 + 1]
+              to_dict[k] = v
+            poi_args.update_from_dict(to_dict)
+
+        if process_id == 0:
+            logging.info(f"poi args: {poi_args}")
 
     # start FedAvg algorithm
     # for distributed algorithm, train_data_gloabl and test_data_global are required

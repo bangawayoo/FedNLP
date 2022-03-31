@@ -106,7 +106,7 @@ if __name__ == "__main__":
     model_args.load(model_args.model_name)
     model_args.num_labels = num_labels
     model_args.update_from_args(args)
-    logging.info(model_args)
+    logging.info("model_args = " + str(model_args))
 
     model_args.config["num_labels"] = num_labels
     model_config, client_model, tokenizer = create_model(
@@ -143,7 +143,6 @@ if __name__ == "__main__":
             poisoned_idx = [1]
 
         trigger_word_idx = preprocessor.return_trigger_idx(poi_args.trigger_word)
-
         poi_args.update_from_dict({
                       'poisoned_client_idxs': poisoned_idx,
                        'num_poisoned': num_poison,
@@ -162,12 +161,13 @@ if __name__ == "__main__":
             poi_args.update_from_dict(to_dict)
 
         if process_id == 0:
-            logging.info(poi_args)
+            logging.info(f"poi args: {poi_args}")
     # start FedAvg algorithm
     # for distributed algorithm, train_data_global and test_data_global are required
     if process_id == 0:
         client_trainer.test_dl = test_data_global
     args.client_num_in_total = num_clients
+
     fl_algorithm = get_fl_algorithm_initializer(args.fl_algorithm)
     fl_algorithm(process_id, worker_number, device, comm, client_model, train_data_num,
                  train_data_global, test_data_global, train_data_local_num_dict,
