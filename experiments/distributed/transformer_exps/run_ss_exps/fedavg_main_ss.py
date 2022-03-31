@@ -67,7 +67,7 @@ if __name__ == "__main__":
 
     # logging.info("process_id = %d, size = %d" % (process_id, worker_number))
 
-    exp_name = str(args.fl_algorithm) + str(args.dataset) + "-" \
+    exp_name = str(args.fl_algorithm) + "-" + str(args.dataset) + "-" \
                 + str(args.model_name) + "-" + args.exp_name
     tags = ["poison"] if args.poison else ["clean"]
     if process_id == 0:
