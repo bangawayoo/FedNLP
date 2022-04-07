@@ -53,11 +53,11 @@ do
     --epochs 1 \
     --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
     --exp_name "fixed_freq" \
-    -poison --poison_ratio 0.5 --poison_epochs 10 \
-    --adv_sampling "fixed" \
-    --poison_trigger_word "cf" "bb" "mn" \
-    --poison_trigger_pos "random 0 15" \
-    --adv_sampling "fixed" \
+#    -poison --poison_ratio 0.5 --poison_epochs 10 \
+#    --adv_sampling "fixed" \
+#    --poison_trigger_word "cf" "bb" "mn" \
+#    --poison_trigger_pos "random 0 15" \
+#    --adv_sampling "fixed" \
 
 #    -poison_ensemble --poison_num_ensemble 2 \
 #    --defense_type "norm_diff_clipping" --norm_bound "0.1"
