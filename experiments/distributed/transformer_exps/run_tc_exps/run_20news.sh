@@ -5,11 +5,12 @@ GPU_MAPPING=$3
 
 C_LR="5e-5"
 S_LR="1.0"
-ROUND=50
+ROUND=100
 NUM_CLIENT=100
 
 hostname > mpi_host_file
 export WANDB_START_METHOD="thread"
+wandb online
 wandb enabled
 LOG_FILE="fedavg_transformer_tc.log"
 CI=0
@@ -22,7 +23,8 @@ echo $PROCESS_NUM
 hostname > mpi_host_file
 
 ALPHA="1.0"
-SEED="0 1 2"
+SEED="0 1 2 3 4"
+pratio="0.005"
 #tmux-mpi $PROCESS_NUM gdb --ex run --args \
 for alpha in $ALPHA
 do
@@ -30,7 +32,7 @@ do
   do
 
 #  tmux-mpi $PROCESS_NUM gdb --ex run --args \
-  EXP_NAME="less_visible-modelp-pratio=0.01-alpha=$alpha"
+  EXP_NAME="num_trigger=3-range=100-modelp-pratio=${pratio}-alpha=$alpha"
   mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
   python -m fedavg_main_tc \
     --gpu_mapping_file "../gpu_mapping.yaml" \
@@ -54,13 +56,12 @@ do
     --epochs 1 \
     --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
     --exp_name $EXP_NAME \
-    -poison --poison_ratio 0.01 --poison_epochs 200 \
+    -poison --poison_ratio $pratio --poison_epochs 200 \
     --adv_sampling "fixed" \
-    --poison_trigger_word "cf" \
-    --poison_trigger_pos "random 0 50" \
-    --adv_sampling "fixed"
+    --poison_trigger_word "cf" "bb" "mn" \
+    --poison_trigger_pos "random 0 100"
 
-  EXP_NAME="less_visible-modelp-ensemble=2-pratio=0.01-alpha=$alpha"
+  EXP_NAME="num_trigger=3-range=100-modelp-ensemble=2-pratio=${pratio}-alpha=$alpha"
   mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
   python -m fedavg_main_tc \
     --gpu_mapping_file "../gpu_mapping.yaml" \
@@ -84,11 +85,10 @@ do
     --epochs 1 \
     --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
     --exp_name $EXP_NAME \
-    -poison --poison_ratio 0.01 --poison_epochs 200 \
+    -poison --poison_ratio $pratio --poison_epochs 200 \
     --adv_sampling "fixed" \
-    --poison_trigger_word "cf" \
-    --poison_trigger_pos "random 0 50" \
-    --adv_sampling "fixed" \
+    --poison_trigger_word "cf" "bb" "mn" \
+    --poison_trigger_pos "random 0 100" \
     -poison_ensemble --poison_num_ensemble 2
 #    --defense_type "norm_diff_clipping" --norm_bound "0.1"
 #    -data_poison --data_poison_ratio 1.0 -collude_data

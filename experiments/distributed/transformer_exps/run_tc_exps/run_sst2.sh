@@ -10,7 +10,8 @@ NUM_CLIENT=100
 
 hostname > mpi_host_file
 export WANDB_START_METHOD="thread"
-wandb disabled
+wandb online
+wandb enabled
 LOG_FILE="fedavg_transformer_tc.log"
 CI=0
 
