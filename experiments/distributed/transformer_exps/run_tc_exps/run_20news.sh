@@ -55,7 +55,7 @@ do
     --server_lr $S_LR --server_momentum 0.9 \
     --epochs 1 \
     --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
-    --exp_name $EXP_NAME \
+    --exp_name $EXP_NAME --manual_seed $seed \
     -poison --poison_ratio $pratio --poison_epochs 200 \
     --adv_sampling "fixed" \
     --poison_trigger_word "cf" "bb" "mn" \
@@ -84,7 +84,7 @@ do
     --server_lr $S_LR --server_momentum 0.9 \
     --epochs 1 \
     --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
-    --exp_name $EXP_NAME \
+    --exp_name $EXP_NAME --manual_seed $seed \
     -poison --poison_ratio $pratio --poison_epochs 200 \
     --adv_sampling "fixed" \
     --poison_trigger_word "cf" "bb" "mn" \
