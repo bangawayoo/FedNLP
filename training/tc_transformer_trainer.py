@@ -579,7 +579,12 @@ class TextClassificationTrainer:
 
                     loss.backward()
                     tr_loss += loss.item()
-                    grad_sum = (1-ema_alpha) * word_embedding_module.weight.grad.detach() + ema_alpha * grad_sum
+
+                    # if this is the first state, multiply by (1-ema_alpha)
+                    if grad_sum == 0 and isinstance(grad_sum, int):
+                        grad_sum = word_embedding_module.weight.grad.detach() * (1-ema_alpha)
+                    else:
+                        grad_sum = ema_alpha * word_embedding_module.weight.grad.detach() + (1-ema_alpha) * grad_sum
 
                 if (batch_idx + 1) % poi_args.gradient_accumulation_steps == 0:
                     grad_norm += torch.norm(grad_sum[trigger_idx, :], p=2, dim=-1).mean().item()
