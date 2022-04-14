@@ -581,7 +581,7 @@ class TextClassificationTrainer:
                     tr_loss += loss.item()
 
                     # if this is the first state, multiply by (1-ema_alpha)
-                    if grad_sum == 0 and isinstance(grad_sum, int):
+                    if isinstance(grad_sum, int):
                         grad_sum = word_embedding_module.weight.grad.detach() * (1-ema_alpha)
                     else:
                         grad_sum = ema_alpha * word_embedding_module.weight.grad.detach() + (1-ema_alpha) * grad_sum
