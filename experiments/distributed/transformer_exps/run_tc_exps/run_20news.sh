@@ -32,7 +32,7 @@ do
   do
 
 #  tmux-mpi $PROCESS_NUM gdb --ex run --args \
-#  EXP_NAME="num_trigger=3-range=100-modelp-pratio=${pratio}-alpha=$alpha"
+#  EXP_NAME="num_trigger=3-range=50-modelp-pratio=${pratio}-alpha=$alpha"
 #  mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
 #  python -m fedavg_main_tc \
 #    --gpu_mapping_file "../gpu_mapping.yaml" \
@@ -59,9 +59,9 @@ do
 #    -poison --poison_ratio $pratio --poison_epochs 200 \
 #    --adv_sampling "fixed" \
 #    --poison_trigger_word "cf" "bb" "mn" \
-#    --poison_trigger_pos "random 0 100"
+#    --poison_trigger_pos "random 0 50"
 
-  EXP_NAME="num_trigger=3-range=100-modelp-ensemble=2-pratio=${pratio}-alpha=$alpha"
+  EXP_NAME="num_trigger=3-range=50-modelp-ensemble=2-pratio=${pratio}-alpha=$alpha"
   mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
   python -m fedavg_main_tc \
     --gpu_mapping_file "../gpu_mapping.yaml" \
@@ -88,7 +88,7 @@ do
     -poison --poison_ratio $pratio --poison_epochs 200 \
     --adv_sampling "fixed" \
     --poison_trigger_word "cf" "bb" "mn" \
-    --poison_trigger_pos "random 0 100" \
+    --poison_trigger_pos "random 0 50" \
     -poison_ensemble --poison_num_ensemble 2
 #    --defense_type "norm_diff_clipping" --norm_bound "0.1"
 #    -data_poison --data_poison_ratio 1.0 -collude_data
