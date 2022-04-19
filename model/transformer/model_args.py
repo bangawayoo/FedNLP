@@ -251,5 +251,6 @@ class PoisonArgs(ModelArgs):
                                'collude_data': args.collude_data,
                                'adv_sampling': args.adv_sampling,
                                'interpolate_ensemble': args.interpolate_ensemble,
-                               'ensemble_ema_alpha': args.ensemble_ema_alpha
+                               'ensemble_ema_alpha': args.ensemble_ema_alpha,
+                               'poison_entire_emb': args.poison_entire_emb
                                })
