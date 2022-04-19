@@ -61,7 +61,7 @@ do
     --poison_trigger_word "cf" "bb" "mn" \
     --poison_trigger_pos "random 0 30" -poison_entire_emb
 
-  EXP_NAME="num_trigger=3-range=30-modelp-ensemble=1-pratio=${pratio}-alpha=$alpha"
+  EXP_NAME="num_trigger=3-range=30-datap-pratio=${pratio}-alpha=$alpha"
   mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
   python -m fedavg_main_tc \
     --gpu_mapping_file "../gpu_mapping.yaml" \
