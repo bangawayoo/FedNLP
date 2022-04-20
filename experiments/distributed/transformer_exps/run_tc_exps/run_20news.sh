@@ -86,7 +86,7 @@ do
     --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
     --exp_name $EXP_NAME --manual_seed $seed \
     -poison --poison_ratio $pratio --poison_epochs 200 \
-    --adv_sampling "fixed" \
+    --adv_sampling "random" \
     --poison_trigger_word "cf" "bb" "mn" \
     --poison_trigger_pos "random 0 30" \
     -data_poison --data_poison_ratio 1.0
