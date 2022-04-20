@@ -27,8 +27,8 @@ class FedTransformerTrainer(ModelTrainer):
         poisoned_entity = "Data" if args.data_poison else "Model"
         logging.info(f"Poisoning {poisoned_entity}")
         if args.data_poison:
-            result = self.model_trainer.train_model_on_pdata()
             # Data poisoning does ordinary training with the poisoned dataset
+            result = self.model_trainer.train_model_on_pdata(train_data, test_data, poi_args=args)
             # _ = self.model_trainer.train_model(train_data, device, poi_args=args)
             # result = self.model_trainer.eval_model_on_poison(test_data)
         elif args.ensemble:

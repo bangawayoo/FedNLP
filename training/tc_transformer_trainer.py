@@ -627,7 +627,7 @@ class TextClassificationTrainer:
         dummy_model.zero_grad()
         return result
 
-    def train_model_on_pdata(self, poi_train_dl, device=None, model=None, poi_args=None):
+    def train_model_on_pdata(self, poi_train_dl, poi_test_dl, device=None, model=None, poi_args=None):
         if not device:
             device = self.device
         if poi_args and poi_args.ensemble:
@@ -655,6 +655,8 @@ class TextClassificationTrainer:
             global_model = copy.deepcopy(model)
 
         for epoch in range(0, poi_args.epochs):
+            correct = 0
+            total = 0
             for batch_idx, batch in enumerate(poi_train_dl):
                 model.train()
                 batch = tuple(t for t in batch)
@@ -665,19 +667,22 @@ class TextClassificationTrainer:
                 # (loss), logits, (hidden_states), (attentions)
                 output = model(x)
                 logits = output[0]
+                _, pred = torch.max(logits, dim=-1)
+                correct += (pred==labels.view(-1)).sum().item()
+                total += pred.numel()
 
                 loss_fct = CrossEntropyLoss()
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
-                hidden_states = output[-1]
                 # CLS token of first layer
+                hidden_states = output[-1]
                 first_layer_CLS = hidden_states[1][:,0,:]
-                dis_logits = self.poison_linear(first_layer_CLS)
                 trigger_idx = poi_args.trigger_idx[0]
-
+                # Learn to discriminate between poisoned and clean samples
+                dis_weight = 0.0
+                dis_logits = self.poison_linear(first_layer_CLS)
                 dis_labels = torch.tensor([trigger_idx in row for row in x]).long().to(device)
                 # print(f"{sum(dis_labels)} positive labels")
-                dis_weight = 0.0
                 dis_loss = loss_fct(dis_logits, dis_labels)
 
                 total_loss = dis_weight*dis_loss + loss
@@ -708,21 +713,13 @@ class TextClassificationTrainer:
                     model.zero_grad()
                     global_step += 1
 
-                    if self.args.evaluate_during_training and (self.args.evaluate_during_training_steps > 0
-                                                               and global_step % self.args.evaluate_during_training_steps == 0):
-                        results, _, _ = self.eval_model(epoch, global_step)
-                        logging.info(results)
+            if (correct / total) > 0.95 and (poi_args.centralized_env or poi_args.early_stop):
+                result = self.eval_model_on_poison(poi_test_dl, log_on_file=False, log_on_wandb=False)
+                self.model.zero_grad()
+                return result
 
-                if self.args.is_debug_mode == 1 and global_step > 3:
-                    break
-                if (poi_args and poi_args.ensemble) and global_step % poi_args.ensemble_save_period == 0 \
-                        and saved_ensemble < poi_args.num_ensemble:
-                    self.states.append(copy.deepcopy(model.state_dict()))
-                    saved_ensemble += 1
-
-        # results, _, _ = self.eval_model(self.args.epochs-1, global_step)
-        # logging.info(results)
-        return global_step, tr_loss / global_step
+        result = self.eval_model_on_poison(poi_test_dl, log_on_file=False, log_on_wandb=False)
+        return result
 
 
 
