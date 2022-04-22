@@ -5,7 +5,7 @@ GPU_MAPPING=$3
 
 C_LR="5e-5"
 S_LR="1.0"
-ROUND=100
+ROUND=200
 NUM_CLIENT=100
 
 hostname > mpi_host_file
@@ -24,7 +24,7 @@ hostname > mpi_host_file
 
 ALPHA="5.0"
 SEED="0 1 2 3 4 5 6 7 8 9"
-PRATIO="0.003 0.001"
+PRATIO="0.003 0.002 0.001"
 
 
 #tmux-mpi $PROCESS_NUM gdb --ex run --args \
