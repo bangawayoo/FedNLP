@@ -5,7 +5,7 @@ GPU_MAPPING=$3
 
 C_LR="5e-5"
 S_LR="1.0"
-ROUND=200
+ROUND=100
 NUM_CLIENT=100
 
 hostname > mpi_host_file
