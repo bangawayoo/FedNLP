@@ -25,6 +25,7 @@ hostname > mpi_host_file
 ALPHA="1.0"
 SEED="0 1 2 3 4"
 PRATIO="0.01"
+
 pratio="0.01"
 STD="0.3"
 #tmux-mpi $PROCESS_NUM gdb --ex run --args
@@ -34,9 +35,9 @@ do
   do
     for seed in $SEED
     do
-    EXP_NAME="defense=norm_bound-${std}-pratio=${pratio}-alpha=$alpha"
+    EXP_NAME="adapted_defense=norm_bound-${std}-pratio=${pratio}-alpha=$alpha"
     mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
-    python -m fedavg_main_tc \
+     python -m fedavg_main_tc \
       --gpu_mapping_file "../gpu_mapping.yaml" \
       --gpu_mapping_key $GPU_MAPPING \
       --client_num_per_round $WORKER_NUM \
@@ -63,7 +64,7 @@ do
       --poison_trigger_word "cf" "bb" "mn" \
       --poison_trigger_pos "random 0 30" \
       -poison_ensemble --poison_num_ensemble 1 \
-      --defense_type "norm_diff_clipping" --norm_bound $$std
+      --defense_type "norm_diff_clipping" --norm_bound $std
     done
   done
 done
