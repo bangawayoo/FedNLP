@@ -596,7 +596,7 @@ class TextClassificationTrainer:
                         word_embedding_module.weight.grad = grad_sum * mask
 
                     optimizer.step()
-                    original_norm = torch.tensor(0.3).to(word_embedding_module.weight.device)
+                    # original_norm = torch.tensor(0.3).to(word_embedding_module.weight.device)
                     normalizing_factor = original_norm / word_embedding_module.weight.data[trigger_idx, :].norm(dim=-1)
                     word_embedding_module.weight.data[trigger_idx, :] *= normalizing_factor.unsqueeze(-1)
 
