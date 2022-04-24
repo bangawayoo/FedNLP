@@ -222,7 +222,7 @@ def add_federated_args(parser):
 
     # robust aggregation related
     parser.add_argument('--defense_type', type=str, default="None",
-                        choices=["median_agg", "weak_dp", "norm_diff_clipping", "None", "median_agg_embedding"])
+                        choices=["median_agg", "weak_dp", "norm_diff_clipping", "None", "median_agg_embedding", "krum"])
     parser.add_argument('--stddev', type=float, default=1e-3, help="stddev for weak dp")
     parser.add_argument('--norm_bound', type=float, default=1.0, help="norm bound for norm diff clipping")
 

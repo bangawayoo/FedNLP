@@ -11,7 +11,7 @@ NUM_CLIENT=100
 hostname > mpi_host_file
 export WANDB_START_METHOD="thread"
 wandb online
-wandb enabled
+wandb disabled
 LOG_FILE="fedavg_transformer_tc.log"
 CI=0
 
@@ -36,7 +36,8 @@ do
     for seed in $SEED
     do
     EXP_NAME="adapted_defense=norm_bound-${std}-pratio=${pratio}-alpha=$alpha"
-    mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
+#    mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
+    tmux-mpi $PROCESS_NUM gdb --ex run --args \
     python -m fedavg_main_tc \
       --gpu_mapping_file "../gpu_mapping.yaml" \
       --gpu_mapping_key $GPU_MAPPING \
@@ -64,7 +65,7 @@ do
       --poison_trigger_word "cf" "bb" "mn" \
       --poison_trigger_pos "random 0 30" \
       -poison_ensemble --poison_num_ensemble 1 \
-      --defense_type "norm_diff_clipping" --norm_bound $std
+      --defense_type "krum"
     done
   done
 done
