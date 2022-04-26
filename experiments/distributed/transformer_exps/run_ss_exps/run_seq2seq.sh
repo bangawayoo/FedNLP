@@ -36,7 +36,7 @@ do
       --dataset "${DATA_NAME}" \
       --data_file "${DATA_DIR}/data_files/${DATA_NAME}_data.h5" \
       --partition_file "${DATA_DIR}/partition_files/${DATA_NAME}_partition.h5" \
-      --partition_method $alpha \
+      --partition_method ALPHA \
       --fl_algorithm $FL_ALG \
       --model_type bart \
       --model_name facebook/bart-base \
@@ -46,7 +46,7 @@ do
       --max_seq_length 256 \
       --lr 5e-5 \
       --server_lr 1 --server_momentum 0.0 \
-      --epochs 1 --manual_seed "${seed}"\
+      --epochs 1 --manual_seed ${seed} \
       --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
       --exp_name $EXPNAME --reprocess_input_data \
       -poison --poison_ratio $pratio --poison_epochs 20 \
