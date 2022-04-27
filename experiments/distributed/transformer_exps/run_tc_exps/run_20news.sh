@@ -34,8 +34,7 @@ do
     for seed in $SEED
     do
     EXP_NAME="defense=KRUM-pratio=${pratio}-alpha=$alpha"
-#    mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
-    tmux-mpi $PROCESS_NUM gdb --ex run --args \
+    mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
     python -m fedavg_main_tc \
       --gpu_mapping_file "../gpu_mapping.yaml" \
       --gpu_mapping_key $GPU_MAPPING \
