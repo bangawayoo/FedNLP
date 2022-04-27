@@ -36,7 +36,7 @@ do
       --dataset "${DATA_NAME}" \
       --data_file "${DATA_DIR}/data_files/${DATA_NAME}_data.h5" \
       --partition_file "${DATA_DIR}/partition_files/${DATA_NAME}_partition.h5" \
-      --partition_method ALPHA \
+      --partition_method $ALPHA \
       --fl_algorithm $FL_ALG \
       --model_type bart \
       --model_name facebook/bart-base \

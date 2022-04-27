@@ -10,8 +10,8 @@ NUM_CLIENT=100
 
 hostname > mpi_host_file
 export WANDB_START_METHOD="thread"
-wandb online
-wandb disabled
+wandb offline
+wandb enabled
 LOG_FILE="fedavg_transformer_tc.log"
 CI=0
 
@@ -24,12 +24,10 @@ hostname > mpi_host_file
 
 ALPHA="1.0"
 SEED="0 1 2 3 4"
-PRATIO="0.01"
+PRATIO="0.03 0.05 0.10"
 
-pratio="0.01"
-STD="0.3"
 #tmux-mpi $PROCESS_NUM gdb --ex run --args
-for std in $STD
+for pratio in $PRATIO
 do
   for alpha in $ALPHA
   do
@@ -65,7 +63,7 @@ do
       --poison_trigger_word "cf" "bb" "mn" \
       --poison_trigger_pos "random 0 30" \
       -poison_ensemble --poison_num_ensemble 1 \
-      --defense_type "krum" --krum_f 0.5
+      --defense_type "krum" --krum_f 0.1
     done
   done
 done
