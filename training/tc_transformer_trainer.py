@@ -549,7 +549,8 @@ class TextClassificationTrainer:
             for batch_idx, batch in enumerate(poi_train_data):
                 grad_sum = 0
                 updated_embedding = word_embedding_module.weight.clone()
-                for state in self.states:
+
+                for state_cnt, state in enumerate(self.states):
                     dummy_model.load_state_dict(state)
                     swap_embedding(dummy_model, updated_embedding)
                     dummy_model.to(device)
@@ -580,8 +581,14 @@ class TextClassificationTrainer:
                     loss.backward()
                     tr_loss += loss.item()
 
+                    # if ema_alpha is zero, use simple average
+                    if ema_alpha == 0:
+                        grad_sum += word_embedding_module.weight.grad.detach()
+                        # if this is the last state, divide by number of states
+                        if state_cnt + 1 == len(self.states):
+                            grad_sum /= len(self.states)
                     # if this is the first state, multiply by (1-ema_alpha)
-                    if isinstance(grad_sum, int):
+                    elif isinstance(grad_sum, int):
                         grad_sum = word_embedding_module.weight.grad.detach() * (1-ema_alpha)
                     else:
                         grad_sum = ema_alpha * word_embedding_module.weight.grad.detach() + (1-ema_alpha) * grad_sum
