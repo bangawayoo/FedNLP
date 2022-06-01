@@ -360,6 +360,13 @@ class TextClassificationTrainer:
         #Get word embedding layer
         word_embedding_module = self.model.get_input_embeddings()
         trigger_idx = poi_args.trigger_idx if not poi_args.poison_entire_emb else list(range(len(word_embedding_module.weight)))
+
+        # if dba strategy is used, select one trigger
+        if poi_args.use_dba:
+            selected_idx = poi_args.num_adv_rounds % len(poi_args.trigger_idx)
+            trigger_idx = poi_args.trigger_idx[selected_idx]
+            all_trigger_idx = poi_args.trigger_idx
+
         original_embedding = word_embedding_module.weight.detach()
         original_trigger = original_embedding[trigger_idx, :]
         original_norm = torch.norm(original_trigger, 2, dim=-1)
@@ -370,6 +377,7 @@ class TextClassificationTrainer:
 
         # training result
         global_step = 0
+        print(selected_idx)
         for epoch in range(0, poi_args.epochs):
             correct = 0
             total = 0
@@ -380,6 +388,11 @@ class TextClassificationTrainer:
                 self.model.train()
                 batch = tuple(t for t in batch)
                 # dataset = TensorDataset(all_guid, all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
+
+                # if dba strategy is used, change all trigger ids to the selected one
+                if poi_args.use_dba:
+                    batch[1][sum(batch[1]==i for i in all_trigger_idx).bool()] = trigger_idx
+
                 x = batch[1].to(device)
                 labels = batch[4].to(device)
 
@@ -538,7 +551,7 @@ class TextClassificationTrainer:
         optimizer = torch.optim.Adam(word_embedding_module.parameters(), lr=poi_args.learning_rate)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20, verbose=True)
         ema_alpha = poi_args.ensemble_ema_alpha
-        # training result
+
         global_step = 0
         for epoch in range(0, poi_args.epochs):
             correct = 0

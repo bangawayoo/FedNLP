@@ -34,7 +34,7 @@ do
   do
     for seed in $SEED
     do
-    EXP_NAME="ensemble-simple_mean-pratio=${pratio}"
+    EXP_NAME="dba-pratio=${pratio}"
     mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
     python -m fedavg_main_tc \
       --gpu_mapping_file "../gpu_mapping.yaml" \
@@ -62,8 +62,7 @@ do
       --adv_sampling "fixed" \
       --poison_trigger_word "cf" "bb" "mn" \
       --poison_trigger_pos "random 0 30" \
-      -poison_ensemble --poison_num_ensemble 1 \
-      --ensemble_ema_alpha 0.0
+      -use_dba
 
     done
   done

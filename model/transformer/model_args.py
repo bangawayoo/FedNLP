@@ -226,6 +226,7 @@ class PoisonArgs(ModelArgs):
     data_poison: bool = False
     data_poison_ratio: float = 1.0
     collude_data: bool = False
+    use_dba: bool = False
 
     evaluate_during_training_steps: int = 20
     gradient_accumulation_steps: int = 1
@@ -252,5 +253,6 @@ class PoisonArgs(ModelArgs):
                                'adv_sampling': args.adv_sampling,
                                'interpolate_ensemble': args.interpolate_ensemble,
                                'ensemble_ema_alpha': args.ensemble_ema_alpha,
-                               'poison_entire_emb': args.poison_entire_emb
+                               'poison_entire_emb': args.poison_entire_emb,
+                               'use_dba': args.use_dba
                                })

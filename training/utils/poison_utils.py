@@ -52,6 +52,9 @@ def add_poison_args(parser):
   parser.add_argument('--data_poison_ratio', type=float, default=1.0)
   parser.add_argument('-collude_data', action="store_true")
 
+  #Other strategy options
+  parser.add_argument('-use_dba', action="store_true")
+
   parser.add_argument('--adv_sampling', type=str, default="random")
   parser.add_argument('--poison_epochs', type=int, default=200)
   parser.add_argument('--poison_grad_accum', type=int, default=1)
