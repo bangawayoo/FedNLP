@@ -24,7 +24,7 @@ hostname > mpi_host_file
 
 ALPHA="1.0"
 SEED="0 1 2 3 4"
-PRATIO="0.001 0.003 0.005 0.01"
+PRATIO="0.01"
 
 
 #tmux-mpi $PROCESS_NUM gdb --ex run --args
@@ -61,7 +61,9 @@ do
       -poison --poison_ratio $pratio --poison_epochs 200 \
       --adv_sampling "fixed" \
       --poison_trigger_word "cf" "bb" "mn" \
-      --poison_trigger_pos "random 0 30"
+      --poison_trigger_pos "random 0 30" \
+      -poison_ensemble --poison_num_ensemble 1 \
+      --ensemble_ema_alpha 0.0
 
     done
   done
