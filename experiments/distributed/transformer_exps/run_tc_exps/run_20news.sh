@@ -5,7 +5,7 @@ GPU_MAPPING=$3
 
 C_LR="5e-5"
 S_LR="1.0"
-ROUND=100
+ROUND=50
 NUM_CLIENT=100
 
 hostname > mpi_host_file
@@ -34,7 +34,7 @@ do
   do
     for seed in $SEED
     do
-    EXP_NAME="pratio=${pratio}-alpha=$alpha"
+    EXP_NAME="ensemble-simple_mean-pratio=${pratio}"
     mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
     python -m fedavg_main_tc \
       --gpu_mapping_file "../gpu_mapping.yaml" \
