@@ -665,7 +665,7 @@ class TextClassificationTrainer:
         iteration_in_total = len(
             poi_train_dl) // self.args.gradient_accumulation_steps * poi_args.epochs
         word_embedding_module = self.model.get_input_embeddings()
-        optimizer = AdamW(word_embedding_module.parameters(), lr=self.args.learning_rate, eps=self.args.adam_epsilon)
+        optimizer = AdamW(self.model.parameters(), lr=self.args.learning_rate, eps=self.args.adam_epsilon)
 
         # training result
         global_step = 0
