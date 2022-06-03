@@ -23,7 +23,7 @@ echo $PROCESS_NUM
 hostname > mpi_host_file
 
 ALPHA="1.0 5.0 10.0"
-SEED="0 1 2"
+SEED="0"
 PRATIO="0.01"
 
 
@@ -58,11 +58,12 @@ do
       --epochs 1 \
       --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
       --exp_name $EXP_NAME --manual_seed $seed \
-      -poison --poison_ratio $pratio --poison_epochs 0 \
+      -poison --poison_ratio $pratio --poison_epochs 50 \
       --adv_sampling "fixed" \
       --poison_trigger_word "cf" "bb" "mn" \
       --poison_trigger_pos "random 0 30" \
       -data_poison
+#      --defense_type "norm_diff_clipping" --norm_bound 0.5
 
     done
   done

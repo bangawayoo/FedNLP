@@ -675,7 +675,7 @@ class TextClassificationTrainer:
         if self.args.fl_algorithm == "FedProx":
             global_model = copy.deepcopy(model)
 
-        for epoch in range(0, self.args.epochs):
+        for epoch in range(0, poi_args.epochs):
             correct = 0
             total = 0
             for batch_idx, batch in enumerate(poi_train_dl):
