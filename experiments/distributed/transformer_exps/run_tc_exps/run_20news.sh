@@ -22,8 +22,8 @@ echo $PROCESS_NUM
 
 hostname > mpi_host_file
 
-ALPHA="1.0"
-SEED="0 1 2 3 4"
+ALPHA="1.0 5.0 10.0"
+SEED="0 1 2"
 PRATIO="0.01"
 
 
@@ -34,7 +34,7 @@ do
   do
     for seed in $SEED
     do
-    EXP_NAME="datap_mr-sampling=random-pratio=${pratio}"
+    EXP_NAME="sanity_check-datap_mr=1-sampling=fixed-pratio=${pratio}-alpha=${alpha}"
     mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
     python -m fedavg_main_tc \
       --gpu_mapping_file "../gpu_mapping.yaml" \
@@ -58,8 +58,8 @@ do
       --epochs 1 \
       --output_dir "/tmp/fedavg_${DATA_NAME}_output/" \
       --exp_name $EXP_NAME --manual_seed $seed \
-      -poison --poison_ratio $pratio --poison_epochs 200 \
-      --adv_sampling "random" \
+      -poison --poison_ratio $pratio --poison_epochs 0 \
+      --adv_sampling "fixed" \
       --poison_trigger_word "cf" "bb" "mn" \
       --poison_trigger_pos "random 0 30" \
       -data_poison
