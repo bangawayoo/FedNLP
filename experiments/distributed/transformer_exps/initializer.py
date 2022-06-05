@@ -72,7 +72,7 @@ def create_model(args, formulation="classification"):
     else:
         tokenizer = [None, None]
         tokenizer[0] = tokenizer_class.from_pretrained(args.model_name)
-        tokenizer[1]= tokenizer[0]
+        tokenizer[1] = tokenizer[0]
     # logging.info(self.model)
     return config, model, tokenizer
 
