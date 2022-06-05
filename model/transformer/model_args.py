@@ -254,5 +254,6 @@ class PoisonArgs(ModelArgs):
                                'interpolate_ensemble': args.interpolate_ensemble,
                                'ensemble_ema_alpha': args.ensemble_ema_alpha,
                                'poison_entire_emb': args.poison_entire_emb,
-                               'use_dba': args.use_dba
+                               'use_dba': args.use_dba,
+                               'mr_scale': args.mr_scale
                                })

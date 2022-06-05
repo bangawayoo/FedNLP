@@ -34,7 +34,7 @@ do
   do
     for seed in $SEED
     do
-    EXP_NAME="sanity_check-datap_mr=1-sampling=fixed-pratio=${pratio}-alpha=${alpha}"
+    EXP_NAME="datap_mr=1.5_epochs=50-sampling=fixed-pratio=${pratio}-alpha=${alpha}"
     mpirun -np $PROCESS_NUM -hostfile mpi_host_file \
     python -m fedavg_main_tc \
       --gpu_mapping_file "../gpu_mapping.yaml" \
@@ -62,7 +62,7 @@ do
       --adv_sampling "fixed" \
       --poison_trigger_word "cf" "bb" "mn" \
       --poison_trigger_pos "random 0 30" \
-      -data_poison
+      -data_poison -mr_scale 1.5
 #      --defense_type "norm_diff_clipping" --norm_bound 0.5
 
     done

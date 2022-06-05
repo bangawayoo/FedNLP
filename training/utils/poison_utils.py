@@ -46,6 +46,8 @@ def add_poison_args(parser):
   parser.add_argument('--poison_num_ensemble', type=int, default=1)
   parser.add_argument('--ensemble_ema_alpha', type=float, default=0.9)
   parser.add_argument('-poison_entire_emb', action="store_true")
+  parser.add_argument('--mr_scale', type=float, default=1.0)
+
 
   # Data Poisoning
   parser.add_argument('-data_poison', action="store_true")
