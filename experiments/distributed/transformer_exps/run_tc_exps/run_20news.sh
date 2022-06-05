@@ -22,7 +22,7 @@ echo $PROCESS_NUM
 
 hostname > mpi_host_file
 
-ALPHA="1.0 5.0 10.0"
+ALPHA="1.0"
 SEED="0"
 PRATIO="0.01"
 
